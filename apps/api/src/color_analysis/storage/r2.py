@@ -17,11 +17,14 @@ class R2Client:
             aws_secret_access_key=settings.s3_secret_access_key,
         )
 
+    MAX_UPLOAD_BYTES = 25_000_000
+
     def put_presigned_post(self, key: str, expires_in_seconds: int = 300) -> dict[str, Any]:
         return self.client.generate_presigned_post(
             Bucket=self.bucket,
             Key=key,
             ExpiresIn=expires_in_seconds,
+            Conditions=[["content-length-range", 1, self.MAX_UPLOAD_BYTES]],
         )
 
     def get_object_bytes(self, key: str) -> bytes:
