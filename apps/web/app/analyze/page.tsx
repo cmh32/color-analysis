@@ -29,6 +29,12 @@ export default function AnalyzePage() {
 
       setMessage(`Status: ${status.status}`);
       if (status.status === "complete") {
+        if (status.result_state === "insufficient_photos") {
+          setMessage(
+            "Not enough usable photos — at least 6 clear face photos are required. Please try again with better lighting and a direct angle."
+          );
+          return;
+        }
         router.push(`/result/${sessionId}`);
         return;
       }
