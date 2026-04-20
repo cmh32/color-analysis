@@ -53,7 +53,7 @@ def run(inputs: list[PhotoInput]) -> PipelineResult:
     quality_mean = float(
         np.mean(
             [
-                (min(1.0, report.blur_score / 400.0) * 0.6) + (report.exposure_score * 0.4)
+                (min(1.0, report.blur_score / 120.0) * 0.6) + (report.exposure_score * 0.4)
                 for report in quality_reports.values()
             ]
         )
