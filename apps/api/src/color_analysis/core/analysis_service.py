@@ -15,9 +15,9 @@ class AnalysisService:
         self.redis = RedisQueue()
 
     async def enqueue(self, session: AnalysisSession) -> AnalyzeResponse:
+        self.redis.enqueue_analysis(str(session.id))
         session.status = "running"
         await self.db.commit()
-        self.redis.enqueue_analysis(str(session.id))
         return AnalyzeResponse(accepted=True)
 
     async def get_status(self, session_id: uuid.UUID) -> StatusResponse:
