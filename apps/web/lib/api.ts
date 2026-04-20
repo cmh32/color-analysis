@@ -1,6 +1,13 @@
 import type { ClassificationResult } from "@color-analysis/shared-types";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
+type PhotoRegisterResponse = {
+  id: string;
+  accepted: boolean;
+  reasons: string[];
+  upload_url?: string | null;
+  upload_fields?: Record<string, string> | null;
+};
 
 async function call<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(`${API_BASE_URL}${path}`, {
@@ -33,11 +40,33 @@ export async function registerPhoto(
   filename: string,
   mimeType: string,
   sizeBytes: number
-): Promise<{ id: string; accepted: boolean; reasons: string[] }> {
+): Promise<PhotoRegisterResponse> {
   return call(`/v1/sessions/${sessionId}/photos`, {
     method: "POST",
     body: JSON.stringify({ filename, mime_type: mimeType, size_bytes: sizeBytes })
   });
+}
+
+export async function uploadPhoto(
+  uploadUrl: string,
+  uploadFields: Record<string, string>,
+  file: File
+): Promise<void> {
+  const form = new FormData();
+  for (const [key, value] of Object.entries(uploadFields)) {
+    form.append(key, value);
+  }
+  form.append("file", file);
+
+  const response = await fetch(uploadUrl, {
+    method: "POST",
+    body: form
+  });
+
+  if (!response.ok) {
+    const text = await response.text();
+    throw new Error(`Photo upload failed: ${response.status} ${text}`);
+  }
 }
 
 export async function runAnalysis(sessionId: string): Promise<{ accepted: boolean }> {

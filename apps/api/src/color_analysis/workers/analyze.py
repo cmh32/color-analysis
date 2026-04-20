@@ -40,92 +40,97 @@ async def _run(session_id: str) -> None:
                 payload = b""
             inputs.append(PhotoInput(id=str(photo.id), filename=photo.filename, payload=payload))
 
-        result = run(inputs)
+        try:
+            result = run(inputs)
 
-        for photo in photo_rows:
-            db.add(
-                PhotoQuality(
-                    photo_id=photo.id,
-                    accepted=True,
-                    blur_score=200.0,
-                    exposure_score=0.8,
-                    face_count=1,
-                    yaw_degrees=0.0,
-                    pitch_degrees=0.0,
-                    reasons="",
+            for photo in photo_rows:
+                db.add(
+                    PhotoQuality(
+                        photo_id=photo.id,
+                        accepted=True,
+                        blur_score=200.0,
+                        exposure_score=0.8,
+                        face_count=1,
+                        yaw_degrees=0.0,
+                        pitch_degrees=0.0,
+                        reasons="",
+                    )
                 )
-            )
 
-        feature_acc: dict[str, list[float]] = defaultdict(list)
-        for photo in photo_rows:
-            for region in ("cheek_left", "cheek_right", "forehead", "iris_left", "iris_right", "sclera", "hair"):
-                feature = ExtractedFeature(
-                    photo_id=photo.id,
-                    region=region,
-                    l_star=50.0,
-                    a_star=5.0,
-                    b_star=10.0,
-                    c_star=11.2,
-                    h_deg=63.0,
-                    ita_deg=8.0,
+            feature_acc: dict[str, list[float]] = defaultdict(list)
+            for photo in photo_rows:
+                for region in ("cheek_left", "cheek_right", "forehead", "iris_left", "iris_right", "sclera", "hair"):
+                    feature = ExtractedFeature(
+                        photo_id=photo.id,
+                        region=region,
+                        l_star=50.0,
+                        a_star=5.0,
+                        b_star=10.0,
+                        c_star=11.2,
+                        h_deg=63.0,
+                        ita_deg=8.0,
+                    )
+                    db.add(feature)
+                    feature_acc[f"{region}.l_star"].append(feature.l_star)
+
+            for name, values in feature_acc.items():
+                spread = max(values) - min(values) if values else 0.0
+                db.add(
+                    AggregatedFeature(
+                        session_id=parsed,
+                        feature_name=name,
+                        feature_value=sum(values) / max(1, len(values)),
+                        spread=spread,
+                    )
                 )
-                db.add(feature)
-                feature_acc[f"{region}.l_star"].append(feature.l_star)
 
-        for name, values in feature_acc.items():
-            spread = max(values) - min(values) if values else 0.0
             db.add(
-                AggregatedFeature(
+                Classification(
                     session_id=parsed,
-                    feature_name=name,
-                    feature_value=sum(values) / max(1, len(values)),
-                    spread=spread,
+                    primary_season=result.classification.top_2[0],
+                    secondary_season=result.classification.top_2[1],
+                    scorecard={
+                        "warmth": result.scorecard.warmth,
+                        "value": result.scorecard.value,
+                        "chroma": result.scorecard.chroma,
+                        "contrast": result.scorecard.contrast,
+                    },
+                    probabilities=result.classification.probabilities,
+                    reliability=result.reliability.score,
+                    reliability_bucket=result.reliability.bucket,
+                    result_state=result.result_state,
                 )
             )
 
-        db.add(
-            Classification(
-                session_id=parsed,
-                primary_season=result.classification.top_2[0],
-                secondary_season=result.classification.top_2[1],
-                scorecard={
-                    "warmth": result.scorecard.warmth,
-                    "value": result.scorecard.value,
-                    "chroma": result.scorecard.chroma,
-                    "contrast": result.scorecard.contrast,
-                },
-                probabilities=result.classification.probabilities,
-                reliability=result.reliability.score,
-                reliability_bucket=result.reliability.bucket,
-                result_state=result.result_state,
-            )
-        )
-
-        db.add(
-            AuditTrace(
-                session_id=parsed,
-                stage="pipeline",
-                payload={"trace": list(result.trace), "result_state": result.result_state},
-            )
-        )
-
-        thumb_prefix = f"sessions/{session_id}/thumbnails"
-        for photo in photo_rows:
-            image = Image.new("RGB", (256, 256), color=(20, 120, 100))
-            buff = io.BytesIO()
-            image.save(buff, format="JPEG")
-            r2.put_object_bytes(
-                key=f"{thumb_prefix}/{photo.id}.jpg",
-                payload=buff.getvalue(),
-                content_type="image/jpeg",
+            db.add(
+                AuditTrace(
+                    session_id=parsed,
+                    stage="pipeline",
+                    payload={"trace": list(result.trace), "result_state": result.result_state},
+                )
             )
 
-        session_obj.status = "complete"
-        session_obj.result_state = result.result_state
-        session_obj.reliability = result.reliability.score
-        session_obj.reliability_bucket = result.reliability.bucket
+            thumb_prefix = f"sessions/{session_id}/thumbnails"
+            for photo in photo_rows:
+                image = Image.new("RGB", (256, 256), color=(20, 120, 100))
+                buff = io.BytesIO()
+                image.save(buff, format="JPEG")
+                r2.put_object_bytes(
+                    key=f"{thumb_prefix}/{photo.id}.jpg",
+                    payload=buff.getvalue(),
+                    content_type="image/jpeg",
+                )
 
-        await db.commit()
+            session_obj.status = "complete"
+            session_obj.result_state = result.result_state
+            session_obj.reliability = result.reliability.score
+            session_obj.reliability_bucket = result.reliability.bucket
+            await db.commit()
+        except Exception:
+            session_obj.status = "failed"
+            session_obj.result_state = "failed"
+            await db.commit()
+            raise
 
 
 def run_analysis(session_id: str) -> None:

@@ -1,7 +1,25 @@
 "use client";
 
 import { useState } from "react";
-import { createSession, registerPhoto, runAnalysis } from "../lib/api";
+import { createSession, registerPhoto, runAnalysis, uploadPhoto } from "../lib/api";
+
+function inferMimeType(file: File): string {
+  if (file.type) {
+    return file.type;
+  }
+
+  const lower = file.name.toLowerCase();
+  if (lower.endsWith(".heic")) {
+    return "image/heic";
+  }
+  if (lower.endsWith(".heif")) {
+    return "image/heif";
+  }
+  if (lower.endsWith(".png")) {
+    return "image/png";
+  }
+  return "image/jpeg";
+}
 
 export function Upload({ onSessionReady }: { onSessionReady: (sessionId: string) => void }) {
   const [busy, setBusy] = useState(false);
@@ -20,7 +38,21 @@ export function Upload({ onSessionReady }: { onSessionReady: (sessionId: string)
     try {
       const session = await createSession();
       for (const file of files) {
-        await registerPhoto(session.id, file.name, file.type || "image/jpeg", file.size);
+        const registration = await registerPhoto(
+          session.id,
+          file.name,
+          inferMimeType(file),
+          file.size
+        );
+
+        if (!registration.accepted) {
+          throw new Error(`Photo rejected: ${registration.reasons.join(", ")}`);
+        }
+        if (!registration.upload_url || !registration.upload_fields) {
+          throw new Error("Photo registration did not return upload credentials");
+        }
+
+        await uploadPhoto(registration.upload_url, registration.upload_fields, file);
       }
       await runAnalysis(session.id);
       onSessionReady(session.id);

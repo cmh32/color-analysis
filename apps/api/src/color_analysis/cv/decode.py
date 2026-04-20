@@ -3,8 +3,11 @@ import io
 
 import numpy as np
 from PIL import Image, ImageOps
+from pillow_heif import register_heif_opener
 
 from color_analysis.cv.types import DecodedPhoto, PhotoInput
+
+register_heif_opener()
 
 
 def decode_photo(photo: PhotoInput, max_edge: int = 2048) -> DecodedPhoto:
