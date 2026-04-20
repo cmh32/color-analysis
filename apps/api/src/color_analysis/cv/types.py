@@ -94,3 +94,6 @@ class PipelineResult:
     classification: Classification
     reliability: Reliability
     trace: tuple[str, ...]
+    quality_reports: dict[str, "QualityReport"]
+    per_photo_features: list["RegionFeatures"]
+    aggregated_features: dict[str, float]

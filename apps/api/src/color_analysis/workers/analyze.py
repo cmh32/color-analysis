@@ -44,42 +44,48 @@ async def _run(session_id: str) -> None:
             result = run(inputs)
 
             for photo in photo_rows:
+                report = result.quality_reports.get(str(photo.id))
+                if report is not None:
+                    db.add(
+                        PhotoQuality(
+                            photo_id=photo.id,
+                            accepted=report.accepted,
+                            blur_score=report.blur_score,
+                            exposure_score=report.exposure_score,
+                            face_count=report.face_count,
+                            yaw_degrees=report.yaw_degrees,
+                            pitch_degrees=report.pitch_degrees,
+                            reasons=", ".join(report.reasons),
+                        )
+                    )
+
+            for feat in result.per_photo_features:
                 db.add(
-                    PhotoQuality(
-                        photo_id=photo.id,
-                        accepted=True,
-                        blur_score=200.0,
-                        exposure_score=0.8,
-                        face_count=1,
-                        yaw_degrees=0.0,
-                        pitch_degrees=0.0,
-                        reasons="",
+                    ExtractedFeature(
+                        photo_id=uuid.UUID(feat.photo_id),
+                        region=feat.region,
+                        l_star=feat.l_star,
+                        a_star=feat.a_star,
+                        b_star=feat.b_star,
+                        c_star=feat.c_star,
+                        h_deg=feat.h_deg,
+                        ita_deg=feat.ita_deg,
                     )
                 )
 
-            feature_acc: dict[str, list[float]] = defaultdict(list)
-            for photo in photo_rows:
-                for region in ("cheek_left", "cheek_right", "forehead", "iris_left", "iris_right", "sclera", "hair"):
-                    feature = ExtractedFeature(
-                        photo_id=photo.id,
-                        region=region,
-                        l_star=50.0,
-                        a_star=5.0,
-                        b_star=10.0,
-                        c_star=11.2,
-                        h_deg=63.0,
-                        ita_deg=8.0,
-                    )
-                    db.add(feature)
-                    feature_acc[f"{region}.l_star"].append(feature.l_star)
+            spread_acc: dict[str, list[float]] = defaultdict(list)
+            for feat in result.per_photo_features:
+                for metric in ("l_star", "a_star", "b_star", "c_star", "h_deg", "ita_deg"):
+                    spread_acc[f"{feat.region}.{metric}"].append(getattr(feat, metric))
 
-            for name, values in feature_acc.items():
-                spread = max(values) - min(values) if values else 0.0
+            for feature_name, feature_value in result.aggregated_features.items():
+                vals = spread_acc.get(feature_name, [])
+                spread = max(vals) - min(vals) if vals else 0.0
                 db.add(
                     AggregatedFeature(
                         session_id=parsed,
-                        feature_name=name,
-                        feature_value=sum(values) / max(1, len(values)),
+                        feature_name=feature_name,
+                        feature_value=feature_value,
                         spread=spread,
                     )
                 )

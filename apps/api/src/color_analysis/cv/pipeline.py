@@ -31,6 +31,9 @@ def run(inputs: list[PhotoInput]) -> PipelineResult:
             classification=classification,
             reliability=reliability,
             trace=tuple(trace),
+            quality_reports=quality_reports,
+            per_photo_features=[],
+            aggregated_features={},
         )
 
     all_features = []
@@ -70,4 +73,7 @@ def run(inputs: list[PhotoInput]) -> PipelineResult:
         classification=classification,
         reliability=reliability,
         trace=tuple(trace),
+        quality_reports=quality_reports,
+        per_photo_features=all_features,
+        aggregated_features=aggregated,
     )
