@@ -27,7 +27,7 @@ def evaluate_quality(photo: DecodedPhoto) -> QualityReport:
 
     reasons: list[str] = []
     accepted = True
-    if blur_score < 95.0:
+    if blur_score < 35.0:
         accepted = False
         reasons.append("blurry")
     if dark_clip > 0.03 or bright_clip > 0.03:
