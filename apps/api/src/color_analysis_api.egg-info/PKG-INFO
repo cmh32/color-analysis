@@ -1,0 +1,29 @@
+Metadata-Version: 2.4
+Name: color-analysis-api
+Version: 0.1.0
+Summary: Seasonal color analysis API and worker
+Requires-Python: <3.14,>=3.12
+Requires-Dist: alembic==1.14.1
+Requires-Dist: boto3==1.36.2
+Requires-Dist: fastapi==0.115.8
+Requires-Dist: httpx==0.28.1
+Requires-Dist: mediapipe==0.10.33
+Requires-Dist: numpy==2.2.2
+Requires-Dist: opencv-python-headless==4.11.0.86
+Requires-Dist: pillow==11.1.0
+Requires-Dist: pillow-heif==0.21.0
+Requires-Dist: pydantic-settings==2.7.1
+Requires-Dist: python-multipart==0.0.20
+Requires-Dist: redis==5.2.1
+Requires-Dist: rq==2.1.0
+Requires-Dist: sqlalchemy==2.0.37
+Requires-Dist: asyncpg==0.30.0
+Requires-Dist: greenlet==3.1.1
+Requires-Dist: uvicorn==0.34.0
+Provides-Extra: dev
+Requires-Dist: mypy==1.14.1; extra == "dev"
+Requires-Dist: pytest==8.3.4; extra == "dev"
+Requires-Dist: pytest-asyncio==0.25.3; extra == "dev"
+Requires-Dist: pytest-cov==6.0.0; extra == "dev"
+Requires-Dist: ruff==0.9.2; extra == "dev"
+Requires-Dist: syrupy==4.8.1; extra == "dev"

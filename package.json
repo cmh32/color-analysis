@@ -1,0 +1,17 @@
+{
+  "name": "color-analysis",
+  "private": true,
+  "packageManager": "pnpm@10.0.0",
+  "scripts": {
+    "dev": "turbo run dev --parallel",
+    "build": "turbo run build",
+    "lint": "turbo run lint",
+    "typecheck": "turbo run typecheck",
+    "test": "turbo run test",
+    "export-openapi": "turbo run export-openapi",
+    "gen:types": "pnpm --filter @color-analysis/shared-types build"
+  },
+  "devDependencies": {
+    "turbo": "^2.0.14"
+  }
+}

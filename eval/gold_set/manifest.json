@@ -1,0 +1,16 @@
+{
+  "subjects": [
+    {
+      "id": "fixture_subject_1",
+      "photos": [
+        "apps/api/tests/fixtures/happy_path/photo_1.jpg",
+        "apps/api/tests/fixtures/happy_path/photo_2.jpg",
+        "apps/api/tests/fixtures/happy_path/photo_3.jpg",
+        "apps/api/tests/fixtures/happy_path/photo_4.jpg",
+        "apps/api/tests/fixtures/happy_path/photo_5.jpg",
+        "apps/api/tests/fixtures/happy_path/photo_6.jpg"
+      ],
+      "skin_tone_bucket": "unknown"
+    }
+  ]
+}

@@ -1,0 +1,15 @@
+{
+  "name": "@color-analysis/shared-types",
+  "version": "0.1.0",
+  "private": true,
+  "types": "index.d.ts",
+  "scripts": {
+    "build": "node ./scripts/build.mjs",
+    "lint": "echo 'no-op'",
+    "typecheck": "echo 'no-op'",
+    "test": "echo 'no-op'"
+  },
+  "devDependencies": {
+    "openapi-typescript": "^7.5.0"
+  }
+}

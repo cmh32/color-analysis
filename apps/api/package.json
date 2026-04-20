@@ -1,0 +1,11 @@
+{
+  "name": "@color-analysis/api",
+  "private": true,
+  "scripts": {
+    "dev": "uvicorn color_analysis.main:app --app-dir src --reload --port 8000",
+    "lint": "ruff check src tests",
+    "typecheck": "mypy src",
+    "test": "pytest -q",
+    "export-openapi": "python scripts/export_openapi.py"
+  }
+}

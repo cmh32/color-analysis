@@ -1,0 +1,26 @@
+# Node
+node_modules/
+.pnpm-store/
+.next/
+out/
+dist/
+coverage/
+.turbo/
+*.tsbuildinfo
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.venv/
+.env
+
+# Build/runtime
+*.log
+.DS_Store
+.alembic.ini
+
+# Local infra data
+infra/docker/data/

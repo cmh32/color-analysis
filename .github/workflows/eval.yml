@@ -1,0 +1,24 @@
+name: eval
+
+on:
+  pull_request:
+
+jobs:
+  regression-robustness:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/api
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install API deps
+        run: |
+          python -m pip install --upgrade pip
+          pip install .[dev]
+      - name: Run eval
+        run: python ../../eval/scripts/run_eval.py
+      - name: Compare baseline
+        run: python ../../eval/scripts/compare_eval.py

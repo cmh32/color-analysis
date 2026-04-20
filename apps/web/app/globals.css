@@ -1,0 +1,61 @@
+:root {
+  color-scheme: light;
+  --bg: #f7f5ef;
+  --text: #1f2937;
+  --accent: #0c7a65;
+  --border: #c7c5be;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: "Avenir Next", "Segoe UI", sans-serif;
+  color: var(--text);
+  background:
+    radial-gradient(circle at 20% 10%, #f0d9b8, transparent 35%),
+    radial-gradient(circle at 80% 15%, #d9ecf8, transparent 30%),
+    var(--bg);
+}
+
+main {
+  max-width: 840px;
+  margin: 0 auto;
+  padding: 2rem 1rem 3rem;
+}
+
+h1,
+h2,
+h3 {
+  letter-spacing: -0.02em;
+}
+
+button {
+  border: 1px solid var(--border);
+  background: white;
+  border-radius: 999px;
+  padding: 0.65rem 1rem;
+  cursor: pointer;
+}
+
+.card {
+  background: rgba(255, 255, 255, 0.8);
+  border: 1px solid var(--border);
+  border-radius: 1rem;
+  padding: 1rem;
+  margin-top: 1rem;
+}
+
+.row {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+@media (max-width: 700px) {
+  body {
+    font-size: 16px;
+  }
+}
