@@ -12,6 +12,30 @@ from color_analysis.cv.types import PipelineResult, PhotoInput
 from color_analysis.cv.white_balance import apply_white_balance
 
 
+_FEATURE_RANGES: dict[str, float] = {
+    "l_star": 100.0,
+    "a_star": 120.0,
+    "b_star": 120.0,
+    "c_star": 100.0,
+    "h_deg": 360.0,
+    "ita_deg": 180.0,
+}
+
+
+def _compute_consistency(features: list) -> float:
+    """Cross-photo std per feature, normalized to each feature's natural range."""
+    if not features:
+        return 0.0
+    by_key: dict[str, list[float]] = {}
+    for feat in features:
+        for name, scale in _FEATURE_RANGES.items():
+            by_key.setdefault(f"{feat.region}.{name}", []).append(getattr(feat, name) / scale)
+    stds = [float(np.std(vals)) for vals in by_key.values() if len(vals) >= 2]
+    if not stds:
+        return 1.0
+    return max(0.0, min(1.0, 1.0 - float(np.mean(stds)) * 2.0))
+
+
 def run(inputs: list[PhotoInput]) -> PipelineResult:
     trace: list[str] = []
     decoded = [decode_photo(item) for item in inputs]
@@ -61,7 +85,7 @@ def run(inputs: list[PhotoInput]) -> PipelineResult:
             ]
         )
     )
-    consistency_score = max(0.0, min(1.0, 1.0 - np.std(list(aggregated.values() or [0.0])) / 50.0))
+    consistency_score = _compute_consistency(all_features)
     reliability = compute_reliability(quality_mean, consistency_score, classification.margin)
 
     result_state = "ok_low_reliability" if reliability.bucket == "Low" else "ok"
