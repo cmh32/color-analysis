@@ -11,6 +11,8 @@ Monorepo scaffold for a deterministic CV-based seasonal color analysis app.
 
 ## Quick Start
 
+### Option A: Docker infra + local app processes
+
 1. Start infrastructure:
 
 ```bash
@@ -36,8 +38,106 @@ python -m color_analysis.workers.main
 4. Run web locally:
 
 ```bash
-pnpm install
-pnpm --filter @color-analysis/web dev
+corepack pnpm install
+corepack pnpm --filter @color-analysis/web dev
+```
+
+### Option B: Local macOS (no Docker)
+
+Use this path if Docker/MinIO is unavailable locally.
+
+1. Install and start local services:
+
+```bash
+brew install postgresql@18 redis
+brew services start postgresql@18
+brew services start redis
+```
+
+2. Create API venv + dependencies:
+
+```bash
+cd apps/api
+python3 -m venv .venv
+. .venv/bin/activate
+pip install -e '.[dev]'
+pip install 'moto[server]==5.1.4'
+```
+
+3. Bootstrap Postgres and create API tables:
+
+```bash
+cd apps/api
+. .venv/bin/activate
+psql postgres -c "DO \$\$ BEGIN IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'postgres') THEN CREATE ROLE postgres LOGIN PASSWORD 'postgres'; ELSE ALTER ROLE postgres WITH LOGIN PASSWORD 'postgres'; END IF; END \$\$;"
+psql postgres -c "CREATE DATABASE color_analysis OWNER postgres;" 2>/dev/null || true
+PYTHONPATH=src python - <<'PY'
+import asyncio
+from color_analysis.db.base import Base, engine
+import color_analysis.db.models  # noqa: F401
+
+async def main() -> None:
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+    await engine.dispose()
+
+asyncio.run(main())
+PY
+```
+
+4. Run local S3-compatible storage and create bucket:
+
+```bash
+cd apps/api
+. .venv/bin/activate
+moto_server -H 127.0.0.1 -p 9000
+```
+
+In a separate terminal:
+
+```bash
+cd apps/api
+. .venv/bin/activate
+python -c "import boto3; s3=boto3.client('s3', endpoint_url='http://127.0.0.1:9000', aws_access_key_id='minioadmin', aws_secret_access_key='minioadmin', region_name='us-east-1'); names=[b['Name'] for b in s3.list_buckets().get('Buckets', [])]; s3.create_bucket(Bucket='color-analysis') if 'color-analysis' not in names else None"
+```
+
+5. Run API:
+
+```bash
+cd apps/api
+. .venv/bin/activate
+export PYTHONPATH=src
+export COLOR_ANALYSIS_POSTGRES_DSN='postgresql+asyncpg://postgres:postgres@127.0.0.1:5432/color_analysis'
+export COLOR_ANALYSIS_REDIS_URL='redis://127.0.0.1:6379/0'
+export COLOR_ANALYSIS_S3_ENDPOINT_URL='http://127.0.0.1:9000'
+export COLOR_ANALYSIS_S3_ACCESS_KEY_ID='minioadmin'
+export COLOR_ANALYSIS_S3_SECRET_ACCESS_KEY='minioadmin'
+export COLOR_ANALYSIS_S3_BUCKET='color-analysis'
+uvicorn color_analysis.main:app --app-dir src --reload --port 8000
+```
+
+6. Run worker:
+
+```bash
+cd apps/api
+. .venv/bin/activate
+export PYTHONPATH=src
+export COLOR_ANALYSIS_POSTGRES_DSN='postgresql+asyncpg://postgres:postgres@127.0.0.1:5432/color_analysis'
+export COLOR_ANALYSIS_REDIS_URL='redis://127.0.0.1:6379/0'
+export COLOR_ANALYSIS_S3_ENDPOINT_URL='http://127.0.0.1:9000'
+export COLOR_ANALYSIS_S3_ACCESS_KEY_ID='minioadmin'
+export COLOR_ANALYSIS_S3_SECRET_ACCESS_KEY='minioadmin'
+export COLOR_ANALYSIS_S3_BUCKET='color-analysis'
+export OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YES
+python -m color_analysis.workers.main
+```
+
+7. Run web:
+
+```bash
+cd ../..
+corepack pnpm install
+corepack pnpm --filter @color-analysis/web dev
 ```
 
 ## Useful Commands
