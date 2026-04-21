@@ -1,12 +1,15 @@
 from contextlib import asynccontextmanager
 from typing import AsyncGenerator
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+from slowapi.errors import RateLimitExceeded
 
 from color_analysis.api.admin import router as admin_router
 from color_analysis.api.analysis import router as analysis_router
 from color_analysis.api.errors import register_error_handlers
+from color_analysis.api.limiter import limiter
 from color_analysis.api.photos import router as photos_router
 from color_analysis.api.sessions import router as sessions_router
 from color_analysis.config import get_settings
@@ -22,6 +25,23 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
 
 app = FastAPI(title="Color Analysis API", version="0.1.0", lifespan=lifespan)
+app.state.limiter = limiter
+
+
+async def _rate_limit_handler(request: Request, exc: RateLimitExceeded) -> JSONResponse:
+    return JSONResponse(
+        status_code=429,
+        media_type="application/problem+json",
+        content={
+            "type": "https://errors.color-analysis.local/rate_limit_exceeded",
+            "title": "Too Many Requests",
+            "status": 429,
+            "detail": str(exc.detail),
+        },
+    )
+
+
+app.add_exception_handler(RateLimitExceeded, _rate_limit_handler)
 
 app.add_middleware(
     CORSMiddleware,

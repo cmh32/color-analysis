@@ -1,9 +1,10 @@
-from fastapi import APIRouter, Depends, Response, status
+from fastapi import APIRouter, Depends, Request, Response, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from color_analysis.api.deps import db_session_dep, get_session_or_404, r2_dep, redis_dep
 from color_analysis.core.session_service import SessionService
 from color_analysis.db.models.analysis_session import AnalysisSession
+from color_analysis.api.limiter import limiter
 from color_analysis.schemas.session import SessionCreateResponse
 from color_analysis.storage.r2 import R2Client
 from color_analysis.storage.redis import RedisQueue
@@ -12,7 +13,9 @@ router = APIRouter(prefix="/v1/sessions", tags=["sessions"])
 
 
 @router.post("", response_model=SessionCreateResponse, status_code=status.HTTP_201_CREATED)
+@limiter.limit("10/minute")
 async def create_session(
+    request: Request,
     db: AsyncSession = Depends(db_session_dep),
     r2: R2Client = Depends(r2_dep),
     redis: RedisQueue = Depends(redis_dep),
