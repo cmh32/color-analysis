@@ -1,5 +1,3 @@
-import uuid
-
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -26,6 +24,8 @@ async def analyze(
 ) -> AnalyzeResponse:
     session_service = SessionService(db, r2, redis)
     photos = await session_service.list_photos(session.id)
+    if session.status == "deleted":
+        raise ApiError(410, "Gone", "Session has been deleted", "session_deleted")
     if len(photos) < 6:
         raise ApiError(400, "Insufficient Photos", "At least 6 photos are required", "insufficient_photos")
 
@@ -47,10 +47,9 @@ async def status(
     db: AsyncSession = Depends(db_session_dep),
     redis: RedisQueue = Depends(redis_dep),
 ) -> StatusResponse:
-    del session
-    parsed = uuid.UUID(session_id)
+    del session_id
     service = AnalysisService(db, redis)
-    return await service.get_status(parsed)
+    return await service.get_status(session.id)
 
 
 @router.get("/result", response_model=AnalysisResult)
@@ -60,10 +59,9 @@ async def result(
     db: AsyncSession = Depends(db_session_dep),
     redis: RedisQueue = Depends(redis_dep),
 ) -> AnalysisResult:
-    del session
-    parsed = uuid.UUID(session_id)
+    del session_id
     service = AnalysisService(db, redis)
-    classification = await service.get_classification(parsed)
+    classification = await service.get_classification(session.id)
     if classification is None:
         raise ApiError(404, "Not Found", "Result not ready", "result_not_ready")
 

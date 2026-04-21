@@ -16,6 +16,25 @@ const STATUS_LABELS: Record<string, string> = {
   complete: "Finalizing your profile..."
 };
 
+const RETRYABLE_RESULT_STATES: Record<string, ErrorInfo> = {
+  insufficient_photos: {
+    heading: "Not enough usable photos",
+    detail: "At least 6 clear face photos are required. Retry with brighter lighting and direct angles."
+  },
+  no_face_detected: {
+    heading: "Could not detect a face",
+    detail: "Use well-lit, front-facing photos with one visible face and try again."
+  },
+  multiple_subjects: {
+    heading: "Multiple faces detected",
+    detail: "Upload photos with only one person in frame, then retry."
+  },
+  filter_suspected: {
+    heading: "Photo filters detected",
+    detail: "Please retry with unfiltered original photos."
+  }
+};
+
 export default function AnalyzePage() {
   const router = useRouter();
   const [sessionId, setSessionId] = useState<string | null>(null);
@@ -39,7 +58,9 @@ export default function AnalyzePage() {
 
     let active = true;
     let attempt = 0;
+    let consecutiveErrors = 0;
     const MAX_ATTEMPTS = 120;
+    const MAX_NETWORK_ERRORS = 8;
 
     const poll = async () => {
       if (!active) return;
@@ -57,14 +78,13 @@ export default function AnalyzePage() {
       try {
         const status = await getStatus(sessionId);
         if (!active) return;
+        consecutiveErrors = 0;
 
         if (status.status === "complete") {
-          if (status.result_state === "insufficient_photos") {
-            setErrorInfo({
-              heading: "Not enough usable photos",
-              detail:
-                "At least 6 clear face photos are required. Retry with brighter lighting and direct angles."
-            });
+          const retryableError =
+            status.result_state !== null ? RETRYABLE_RESULT_STATES[status.result_state] : undefined;
+          if (retryableError) {
+            setErrorInfo(retryableError);
             return;
           }
           router.push(`/result/${sessionId}`);
@@ -81,7 +101,15 @@ export default function AnalyzePage() {
 
         setStatusMessage(STATUS_LABELS[status.status] ?? `Status: ${status.status}`);
       } catch {
-        // Ignore transient network errors and keep polling.
+        consecutiveErrors += 1;
+        if (consecutiveErrors >= MAX_NETWORK_ERRORS) {
+          setErrorInfo({
+            heading: "Connection problem",
+            detail: "We lost connection while checking progress. Please try again."
+          });
+          return;
+        }
+        setStatusMessage("Connection issue while checking progress. Retrying...");
       }
 
       window.setTimeout(poll, delay);

@@ -12,6 +12,15 @@ type PhotoRegisterResponse = {
   upload_fields?: Record<string, string> | null;
 };
 
+type ApiProblem = {
+  type?: string;
+  title?: string;
+  status?: number;
+  detail?: string;
+};
+
+const ERROR_TYPE_PREFIX = "https://errors.color-analysis.local/";
+
 function isAbortError(error: unknown): boolean {
   return error instanceof Error && error.name === "AbortError";
 }
@@ -41,6 +50,64 @@ function truncate(text: string, maxLength: number = 180): string {
   return text.length > maxLength ? `${text.slice(0, maxLength)}...` : text;
 }
 
+function extractErrorType(problem: ApiProblem): string | null {
+  if (!problem.type?.startsWith(ERROR_TYPE_PREFIX)) {
+    return null;
+  }
+  return problem.type.slice(ERROR_TYPE_PREFIX.length);
+}
+
+function mapProblemToMessage(problem: ApiProblem, statusCode: number): string {
+  const errorType = extractErrorType(problem);
+  if (errorType === "invalid_session" || errorType === "session_not_found" || errorType === "session_deleted") {
+    return "This session is no longer available. Start a new upload and try again.";
+  }
+  if (errorType === "insufficient_photos") {
+    return "At least 6 clear photos are required before analysis can start.";
+  }
+  if (errorType === "already_running") {
+    return "Analysis is already running for this session. Please wait for it to finish.";
+  }
+  if (errorType === "already_complete") {
+    return "This session is already complete. Start a new upload to run again.";
+  }
+  if (errorType === "rate_limit_exceeded" || statusCode === 429) {
+    return "Too many attempts in a short time. Wait a minute and retry.";
+  }
+  if (errorType === "invalid_request") {
+    return "The request was invalid. Please refresh and retry.";
+  }
+  if (problem.detail) {
+    return truncate(problem.detail);
+  }
+  if (statusCode >= 500) {
+    return "Server error while processing your request. Please retry.";
+  }
+  return `Request failed with HTTP ${statusCode}.`;
+}
+
+async function buildApiError(response: Response): Promise<Error> {
+  let bodyText = "";
+  try {
+    bodyText = await response.text();
+  } catch {
+    bodyText = "";
+  }
+
+  if (bodyText) {
+    try {
+      const parsed = JSON.parse(bodyText) as ApiProblem;
+      if (parsed && typeof parsed === "object") {
+        return new Error(mapProblemToMessage(parsed, response.status));
+      }
+    } catch {
+      return new Error(`API request failed (HTTP ${response.status}): ${truncate(bodyText)}`);
+    }
+  }
+
+  return new Error(`API request failed (HTTP ${response.status}).`);
+}
+
 async function call<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetchWithTimeout(
     `${API_BASE_URL}${path}`,
@@ -57,8 +124,7 @@ async function call<T>(path: string, init?: RequestInit): Promise<T> {
   );
 
   if (!response.ok) {
-    const text = await response.text();
-    throw new Error(`API request failed: ${response.status} ${text}`);
+    throw await buildApiError(response);
   }
 
   if (response.status === 204) {
@@ -115,9 +181,13 @@ export async function uploadPhoto(
 
   if (!response.ok) {
     const text = await response.text();
-    throw new Error(
-      `Photo upload failed at storage (HTTP ${response.status}). ${truncate(text || "No response body")}`
-    );
+    if (response.status === 403) {
+      throw new Error("Photo upload credentials expired or were rejected. Retry the upload.");
+    }
+    if (response.status === 413) {
+      throw new Error("Photo upload was rejected because the file is too large.");
+    }
+    throw new Error(`Photo upload failed at storage (HTTP ${response.status}). ${truncate(text || "No response body")}`);
   }
 }
 

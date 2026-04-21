@@ -22,13 +22,18 @@ _r2 = R2Client()
 
 
 async def _run(session_id: str) -> None:
-    parsed = uuid.UUID(session_id)
+    try:
+        parsed = uuid.UUID(session_id)
+    except ValueError:
+        return
     r2 = _r2
 
     async with SessionLocal() as db:
         session_obj = await db.get(AnalysisSession, parsed)
         if session_obj is None:
-            raise ValueError(f"Session not found: {session_id}")
+            return
+        if session_obj.status in {"complete", "deleted"}:
+            return
 
         photo_rows = list(
             await db.scalars(select(Photo).where(Photo.session_id == parsed).order_by(Photo.created_at.asc()))

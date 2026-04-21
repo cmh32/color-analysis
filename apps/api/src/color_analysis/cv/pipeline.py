@@ -38,67 +38,90 @@ def _compute_consistency(features: list) -> float:
     return max(0.0, min(1.0, 1.0 - float(np.mean(stds)) * 2.0))
 
 
+def _empty_result(
+    result_state: str,
+    trace: list[str],
+    quality_reports: dict[str, QualityReport],
+) -> PipelineResult:
+    dummy_scorecard = build_scorecard({})
+    classification = classify(dummy_scorecard)
+    reliability = compute_reliability(0.0, 0.0, 0.0)
+    return PipelineResult(
+        result_state=result_state,
+        scorecard=dummy_scorecard,
+        classification=classification,
+        reliability=reliability,
+        trace=tuple(trace),
+        quality_reports=quality_reports,
+        per_photo_features=[],
+        aggregated_features={},
+    )
+
+
 def run(inputs: Iterable[PhotoInput]) -> PipelineResult:
     trace: list[str] = []
 
     quality_reports: dict[str, QualityReport] = {}
     accepted: list[DecodedPhoto] = []
     for item in inputs:
-        decoded = decode_photo(item)
-        report = evaluate_quality(decoded)
-        quality_reports[decoded.id] = report
-        if report.accepted:
-            accepted.append(decoded)
+        try:
+            decoded = decode_photo(item)
+            report = evaluate_quality(decoded)
+            quality_reports[decoded.id] = report
+            if report.accepted:
+                accepted.append(decoded)
+        except Exception:
+            quality_reports[item.id] = QualityReport(
+                photo_id=item.id,
+                accepted=False,
+                blur_score=0.0,
+                exposure_score=0.0,
+                face_count=0,
+                yaw_degrees=0.0,
+                pitch_degrees=0.0,
+                reasons=("decode_failed",),
+            )
+            trace.append(f"{item.id}:decode_failed")
     trace.append("decode+quality")
 
     if len(accepted) < 6:
-        dummy_scorecard = build_scorecard({})
-        classification = classify(dummy_scorecard)
-        reliability = compute_reliability(0.0, 0.0, 0.0)
-        return PipelineResult(
-            result_state="insufficient_photos",
-            scorecard=dummy_scorecard,
-            classification=classification,
-            reliability=reliability,
-            trace=tuple(trace),
-            quality_reports=quality_reports,
-            per_photo_features=[],
-            aggregated_features={},
-        )
+        return _empty_result("insufficient_photos", trace, quality_reports)
 
     all_features = []
     wb_confidence: dict[str, float] = {}
     photos_with_landmarks = 0
+    photos_with_processing_errors = 0
 
     for photo in accepted:
-        landmarks = detect_landmarks(photo)
+        try:
+            landmarks = detect_landmarks(photo)
+        except Exception:
+            photos_with_processing_errors += 1
+            trace.append(f"{photo.id}:landmark_detection_failed")
+            continue
+
         if landmarks is None:
             trace.append(f"{photo.id}:no_face")
             continue
-        photos_with_landmarks += 1
-        masks = build_region_masks(photo.rgb.shape, landmarks)
-        wb_rgb, wb_method, confidence = apply_white_balance(photo.rgb, masks)
-        wb_confidence[photo.id] = confidence
-
-        features = extract_features(photo.id, wb_rgb, masks)
-        all_features.extend(features)
-        trace.append(f"{photo.id}:landmarks+regions+wb={wb_method}+features")
+        try:
+            photos_with_landmarks += 1
+            masks = build_region_masks(photo.rgb.shape, landmarks)
+            wb_rgb, wb_method, confidence = apply_white_balance(photo.rgb, masks)
+            wb_confidence[photo.id] = confidence
+            features = extract_features(photo.id, wb_rgb, masks)
+            all_features.extend(features)
+            trace.append(f"{photo.id}:landmarks+regions+wb={wb_method}+features")
+        except Exception:
+            photos_with_processing_errors += 1
+            trace.append(f"{photo.id}:feature_extraction_failed")
+            continue
 
     if photos_with_landmarks == 0:
-        dummy_scorecard = build_scorecard({})
-        classification = classify(dummy_scorecard)
-        reliability = compute_reliability(0.0, 0.0, 0.0)
+        if photos_with_processing_errors > 0:
+            trace.append("pipeline:processing_failed")
+            return _empty_result("failed", trace, quality_reports)
         trace.append("landmarks:no_face_detected")
-        return PipelineResult(
-            result_state="no_face_detected",
-            scorecard=dummy_scorecard,
-            classification=classification,
-            reliability=reliability,
-            trace=tuple(trace),
-            quality_reports=quality_reports,
-            per_photo_features=[],
-            aggregated_features={},
-        )
+        return _empty_result("no_face_detected", trace, quality_reports)
 
     aggregated = aggregate_features(all_features, quality_reports, wb_confidence)
     scorecard = build_scorecard(aggregated)

@@ -56,14 +56,43 @@ export function Upload({ onSessionReady }: { onSessionReady: (sessionId: string)
   const [statusMessage, setStatusMessage] = useState("Preparing analysis...");
   const [error, setError] = useState<string | null>(null);
   const [fileCount, setFileCount] = useState(0);
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [canRetry, setCanRetry] = useState(false);
 
-  const onFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(event.target.files ?? []);
+  const mapPhotoRegistrationError = (reasons: string[]): string => {
+    const normalizedReasons = reasons.map((reason) => reason.toLowerCase());
+    if (normalizedReasons.some((reason) => reason.includes("mime") || reason.includes("type"))) {
+      return WRONG_FILE_TYPE_MESSAGE;
+    }
+    if (normalizedReasons.includes("photo_limit_exceeded")) {
+      return "This upload session reached the 15-photo limit. Choose files again to start a new session.";
+    }
+    if (normalizedReasons.includes("session_not_pending")) {
+      return "This session is no longer accepting uploads. Start a new upload and retry.";
+    }
+    if (normalizedReasons.includes("invalid_filename")) {
+      return "One file name is invalid. Rename that file (remove path-like characters) and retry.";
+    }
+    return `Photo rejected: ${reasons.join(", ")}`;
+  };
+
+  const beginUpload = async (files: File[]) => {
     setFileCount(files.length);
+    setCanRetry(false);
+    if (files.length === 0) {
+      setError("Please choose 6 to 15 photos to begin.");
+      return;
+    }
+
     const hasUnsupportedType = files.some((file) => !isSupportedPhotoFile(file));
+    const hasEmptyFile = files.some((file) => file.size <= 0);
 
     if (hasUnsupportedType) {
       setError(WRONG_FILE_TYPE_MESSAGE);
+      return;
+    }
+    if (hasEmptyFile) {
+      setError("One selected file is empty. Please remove it and try again.");
       return;
     }
 
@@ -96,14 +125,7 @@ export function Upload({ onSessionReady }: { onSessionReady: (sessionId: string)
         );
 
         if (!registration.accepted) {
-          const rejectedForType = registration.reasons.some((reason) => {
-            const text = reason.toLowerCase();
-            return text.includes("mime") || text.includes("type") || text.includes("format");
-          });
-          if (rejectedForType) {
-            throw new Error(WRONG_FILE_TYPE_MESSAGE);
-          }
-          throw new Error(`Photo rejected: ${registration.reasons.join(", ")}`);
+          throw new Error(mapPhotoRegistrationError(registration.reasons));
         }
         if (!registration.upload_url || !registration.upload_fields) {
           throw new Error("Photo registration did not return upload credentials");
@@ -126,10 +148,17 @@ export function Upload({ onSessionReady }: { onSessionReady: (sessionId: string)
       onSessionReady(session.id);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Upload failed");
+      setCanRetry(true);
     } finally {
       setBusy(false);
       setStatusMessage("Preparing analysis...");
     }
+  };
+
+  const onFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(event.target.files ?? []);
+    setSelectedFiles(files);
+    await beginUpload(files);
   };
 
   return (
@@ -160,6 +189,13 @@ export function Upload({ onSessionReady }: { onSessionReady: (sessionId: string)
 
       {busy ? <p className="status-line">{statusMessage}</p> : null}
       {error ? <p className="status-line status-error">{error}</p> : null}
+      {canRetry && !busy ? (
+        <div className="actions">
+          <button className="button button-primary" onClick={() => void beginUpload(selectedFiles)}>
+            Retry Upload
+          </button>
+        </div>
+      ) : null}
     </section>
   );
 }

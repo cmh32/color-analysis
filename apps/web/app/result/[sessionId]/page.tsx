@@ -11,9 +11,12 @@ export default function ResultPage() {
   const sessionId = params.sessionId;
   const [result, setResult] = useState<ClassificationResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [requestVersion, setRequestVersion] = useState(0);
 
   useEffect(() => {
     let active = true;
+    setError(null);
+    setResult(null);
     void getResult(sessionId)
       .then((payload) => {
         if (active) {
@@ -29,7 +32,7 @@ export default function ResultPage() {
     return () => {
       active = false;
     };
-  }, [sessionId]);
+  }, [sessionId, requestVersion]);
 
   return (
     <main className="page">
@@ -46,16 +49,21 @@ export default function ResultPage() {
         <section className="panel panel-error">
           <h3 className="section-title">Unable to load your result</h3>
           <p className="status-error">{error}</p>
+          <div className="actions">
+            <button className="button button-primary" onClick={() => setRequestVersion((value) => value + 1)}>
+              Retry
+            </button>
+          </div>
         </section>
       ) : null}
 
       {result ? (
         <ResultScreen result={result} />
-      ) : (
+      ) : !error ? (
         <section className="panel panel-soft">
           <p className="loading-copy">Preparing your report...</p>
         </section>
-      )}
+      ) : null}
     </main>
   );
 }

@@ -11,6 +11,16 @@ from color_analysis.storage.redis import RedisQueue
 
 router = APIRouter(prefix="/v1/sessions/{session_id}/photos", tags=["photos"])
 
+_ALLOWED_MIME_TYPES = {"image/jpeg", "image/jpg", "image/png", "image/heic", "image/heif"}
+
+
+def _is_safe_filename(filename: str) -> bool:
+    if not filename or filename in {".", ".."}:
+        return False
+    if any(char in filename for char in ("/", "\\")):
+        return False
+    return all(ord(char) >= 32 and ord(char) != 127 for char in filename)
+
 
 @router.post("", response_model=PhotoRegisterResponse, status_code=status.HTTP_201_CREATED)
 async def register_photo(
@@ -23,15 +33,25 @@ async def register_photo(
     service = SessionService(db, r2, redis)
     photos = await service.list_photos(session.id)
     settings = get_settings()
+    normalized_filename = payload.filename.strip()
+    normalized_mime_type = payload.mime_type.strip().lower()
 
     reasons: list[str] = []
     accepted = True
+
+    if session.status != "pending":
+        accepted = False
+        reasons.append("session_not_pending")
 
     if len(photos) >= settings.max_photo_uploads:
         accepted = False
         reasons.append("photo_limit_exceeded")
 
-    if payload.mime_type not in {"image/jpeg", "image/png", "image/heic", "image/heif"}:
+    if not _is_safe_filename(normalized_filename):
+        accepted = False
+        reasons.append("invalid_filename")
+
+    if normalized_mime_type not in _ALLOWED_MIME_TYPES:
         accepted = False
         reasons.append("unsupported_mime_type")
 
@@ -44,7 +64,7 @@ async def register_photo(
             upload_fields=None,
         )
 
-    photo = await service.add_photo(session, payload.filename, payload.mime_type, payload.size_bytes)
+    photo = await service.add_photo(session, normalized_filename, normalized_mime_type, payload.size_bytes)
     presigned = r2.put_presigned_post(photo.storage_key)
     upload_url = str(presigned.get("url", ""))
     fields_raw = presigned.get("fields", {})
