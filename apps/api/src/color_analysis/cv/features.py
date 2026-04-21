@@ -93,11 +93,43 @@ def _clean_region_pixels(region: str, pixels: np.ndarray) -> np.ndarray:
     return cleaned if cleaned.shape[0] >= minimum_cleaned else pixels
 
 
+def _focus_region_pixels(region: str, pixels: np.ndarray, ys: np.ndarray, xs: np.ndarray) -> np.ndarray:
+    if pixels.shape[0] < 8:
+        return pixels
+
+    keep = np.ones(pixels.shape[0], dtype=bool)
+    if region in {"cheek_left", "cheek_right"}:
+        keep &= ys <= np.quantile(ys, 0.6)
+        x_lo, x_hi = np.quantile(xs, [0.15, 0.85])
+        keep &= (xs >= x_lo) & (xs <= x_hi)
+    elif region == "hair":
+        keep &= ys >= np.quantile(ys, 0.45)
+        x_lo, x_hi = np.quantile(xs, [0.1, 0.9])
+        keep &= (xs >= x_lo) & (xs <= x_hi)
+
+    focused = pixels[keep]
+    minimum_focused = max(8, int(np.ceil(pixels.shape[0] * 0.25)))
+    return focused if focused.shape[0] >= minimum_focused else pixels
+
+
+def _refine_iris_pixels(pixels: np.ndarray) -> np.ndarray:
+    if pixels.shape[0] < 8:
+        return pixels
+
+    lightness = pixels[:, 0]
+    lo, hi = np.quantile(lightness, [0.2, 0.8])
+    refined = pixels[(lightness >= lo) & (lightness <= hi)]
+    minimum_refined = max(8, int(np.ceil(pixels.shape[0] * 0.35)))
+    return refined if refined.shape[0] >= minimum_refined else pixels
+
+
 def _region_feature(photo_id: str, region: str, lab: np.ndarray, mask: np.ndarray) -> RegionFeatures:
+    ys, xs = np.nonzero(mask)
     pixels = lab[mask]
     if pixels.size == 0:
         pixels = np.zeros((1, 3), dtype=np.float32)
     else:
+        pixels = _focus_region_pixels(region, pixels, ys, xs)
         if region == "hair":
             # Exclude near-white and achromatic pixels (highlights, background, scalp).
             # Actual hair — even platinum blonde — has C* >> 6; near-zero chroma means
@@ -106,6 +138,8 @@ def _region_feature(photo_id: str, region: str, lab: np.ndarray, mask: np.ndarra
             has_color = (pixels[:, 0] <= 88.0) & (chroma >= 6.0)
             if np.count_nonzero(has_color) >= 8:
                 pixels = pixels[has_color]
+        elif region in {"iris_left", "iris_right"}:
+            pixels = _refine_iris_pixels(pixels)
         pixels = _clean_region_pixels(region, pixels)
 
     l_star = float(np.median(pixels[:, 0]))

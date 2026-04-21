@@ -32,6 +32,7 @@ def test_pipeline_happy_path(monkeypatch) -> None:
     assert result.classification.top_2[0] in {"Spring", "Summer", "Autumn", "Winter"}
     assert result.reliability.bucket in {"High", "Medium", "Low"}
     assert len(result.trace) >= 2
+    assert any(key.startswith("display.cheek_left.") for key in result.aggregated_features)
 
 
 def test_pipeline_handles_corrupt_image_without_crashing() -> None:

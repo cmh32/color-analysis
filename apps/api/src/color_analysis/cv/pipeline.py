@@ -96,7 +96,9 @@ def run(inputs: Iterable[PhotoInput]) -> PipelineResult:
         return _empty_result("insufficient_photos", trace, quality_reports)
 
     all_features = []
+    all_display_features = []
     wb_confidence: dict[str, float] = {}
+    display_confidence: dict[str, float] = {}
     photos_with_landmarks = 0
     photos_with_processing_errors = 0
     saw_multiple_subjects = False
@@ -113,10 +115,13 @@ def run(inputs: Iterable[PhotoInput]) -> PipelineResult:
         try:
             photos_with_landmarks += 1
             masks = build_region_masks(photo.rgb.shape, landmarks)
+            display_features = extract_features(photo.id, photo.rgb, masks)
             wb_rgb, wb_method, confidence = apply_white_balance(photo.rgb, masks)
             wb_confidence[photo.id] = confidence
+            display_confidence[photo.id] = 1.0
             features = extract_features(photo.id, wb_rgb, masks)
             all_features.extend(features)
+            all_display_features.extend(display_features)
             trace.append(f"{photo.id}:landmarks+regions+wb={wb_method}+features")
         except Exception:
             photos_with_processing_errors += 1
@@ -134,6 +139,8 @@ def run(inputs: Iterable[PhotoInput]) -> PipelineResult:
         return _empty_result("no_face_detected", trace, quality_reports)
 
     aggregated = aggregate_features(all_features, quality_reports, wb_confidence)
+    display_aggregated = aggregate_features(all_display_features, quality_reports, display_confidence)
+    aggregated.update({f"display.{key}": value for key, value in display_aggregated.items()})
     scorecard = build_scorecard(aggregated)
     classification = classify(scorecard)
 
