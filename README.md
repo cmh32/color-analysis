@@ -144,6 +144,12 @@ corepack pnpm --filter @color-analysis/web dev
 
 If the browser shows a connection error, one of the local dev servers is usually not running.
 
+One-command restart (recommended):
+
+```bash
+./scripts/restart-dev.sh
+```
+
 Start/restart both servers in separate terminals:
 
 1. API (terminal 1):
@@ -151,7 +157,7 @@ Start/restart both servers in separate terminals:
 ```bash
 cd apps/api
 python -m pip install -e '.[dev]'  # first-time setup only
-uvicorn color_analysis.main:app --app-dir src --reload --port 8000
+uvicorn color_analysis.main:app --app-dir src --port 8000
 ```
 
 2. Web (terminal 2):
