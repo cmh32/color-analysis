@@ -68,9 +68,14 @@ def run(inputs: Iterable[PhotoInput]) -> PipelineResult:
 
     all_features = []
     wb_confidence: dict[str, float] = {}
+    photos_with_landmarks = 0
 
     for photo in accepted:
         landmarks = detect_landmarks(photo)
+        if landmarks is None:
+            trace.append(f"{photo.id}:no_face")
+            continue
+        photos_with_landmarks += 1
         masks = build_region_masks(photo.rgb.shape, landmarks)
         wb_rgb, wb_method, confidence = apply_white_balance(photo.rgb, masks)
         wb_confidence[photo.id] = confidence
@@ -78,6 +83,22 @@ def run(inputs: Iterable[PhotoInput]) -> PipelineResult:
         features = extract_features(photo.id, wb_rgb, masks)
         all_features.extend(features)
         trace.append(f"{photo.id}:landmarks+regions+wb={wb_method}+features")
+
+    if photos_with_landmarks == 0:
+        dummy_scorecard = build_scorecard({})
+        classification = classify(dummy_scorecard)
+        reliability = compute_reliability(0.0, 0.0, 0.0)
+        trace.append("landmarks:no_face_detected")
+        return PipelineResult(
+            result_state="no_face_detected",
+            scorecard=dummy_scorecard,
+            classification=classification,
+            reliability=reliability,
+            trace=tuple(trace),
+            quality_reports=quality_reports,
+            per_photo_features=[],
+            aggregated_features={},
+        )
 
     aggregated = aggregate_features(all_features, quality_reports, wb_confidence)
     scorecard = build_scorecard(aggregated)
