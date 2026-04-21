@@ -343,24 +343,42 @@ summary:focus-visible {
 .upload-panel {
   display: grid;
   gap: 0.8rem;
+  border-color: #d8b3c2;
+  background: linear-gradient(155deg, #fff9fc, #fff4f8);
+  box-shadow: 0 16px 34px rgba(125, 89, 105, 0.14);
+}
+
+.upload-title {
+  color: #6f3f56;
+  font-size: clamp(1.35rem, 2.5vw, 1.7rem);
 }
 
 .upload-field {
   display: grid;
   gap: 0.25rem;
-  border: 1px dashed #dabfcb;
+  border: 2px dashed #c88fa7;
   border-radius: 1rem;
   padding: 1rem;
-  background: linear-gradient(160deg, #fffefc, #fff7fb);
+  background: linear-gradient(160deg, #fffefc, #fff6fb);
+  transition: background 160ms ease, border-color 160ms ease, transform 160ms ease;
+  cursor: pointer;
+}
+
+.upload-field:not(.is-disabled):hover {
+  background: linear-gradient(160deg, #fffdfb, #fff0f8);
+  border-color: #b66f8d;
+  transform: translateY(-1px);
 }
 
 .upload-field.is-disabled {
   opacity: 0.65;
+  cursor: not-allowed;
 }
 
 .upload-field-label {
   font-weight: 700;
-  color: #4d4250;
+  color: #5e374b;
+  font-size: 1rem;
 }
 
 .upload-field-hint {

@@ -106,9 +106,8 @@ export default function AnalyzePage() {
         </p>
       </section>
 
-      <GuidanceChecklist />
-
       {!isPolling && !errorInfo && <Upload onSessionReady={handleSessionReady} />}
+      {!isPolling && !errorInfo && <GuidanceChecklist />}
       {isPolling && <ProgressSpinner message={statusMessage} />}
 
       {errorInfo && (

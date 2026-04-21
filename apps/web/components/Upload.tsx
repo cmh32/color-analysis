@@ -3,6 +3,36 @@
 import { useState } from "react";
 import { createSession, registerPhoto, runAnalysis, uploadPhoto } from "../lib/api";
 
+const WRONG_FILE_TYPE_MESSAGE =
+  "Whoops - one or more of your pictures are not the right file type. Please upload JPG, PNG, HEIC, or HEIF files. You're so close to your personalized color profile.";
+
+const ALLOWED_MIME_TYPES = new Set([
+  "image/jpeg",
+  "image/jpg",
+  "image/png",
+  "image/heic",
+  "image/heif"
+]);
+
+function hasAllowedExtension(filename: string): boolean {
+  const lower = filename.toLowerCase();
+  return (
+    lower.endsWith(".jpg") ||
+    lower.endsWith(".jpeg") ||
+    lower.endsWith(".png") ||
+    lower.endsWith(".heic") ||
+    lower.endsWith(".heif")
+  );
+}
+
+function isSupportedPhotoFile(file: File): boolean {
+  const mimeType = file.type.toLowerCase();
+  if (ALLOWED_MIME_TYPES.has(mimeType)) {
+    return true;
+  }
+  return hasAllowedExtension(file.name);
+}
+
 function inferMimeType(file: File): string {
   if (file.type) {
     return file.type;
@@ -30,6 +60,12 @@ export function Upload({ onSessionReady }: { onSessionReady: (sessionId: string)
   const onFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(event.target.files ?? []);
     setFileCount(files.length);
+    const hasUnsupportedType = files.some((file) => !isSupportedPhotoFile(file));
+
+    if (hasUnsupportedType) {
+      setError(WRONG_FILE_TYPE_MESSAGE);
+      return;
+    }
 
     if (files.length < 6 || files.length > 15) {
       setError("Upload between 6 and 15 photos to analyze.");
@@ -60,6 +96,13 @@ export function Upload({ onSessionReady }: { onSessionReady: (sessionId: string)
         );
 
         if (!registration.accepted) {
+          const rejectedForType = registration.reasons.some((reason) => {
+            const text = reason.toLowerCase();
+            return text.includes("mime") || text.includes("type") || text.includes("format");
+          });
+          if (rejectedForType) {
+            throw new Error(WRONG_FILE_TYPE_MESSAGE);
+          }
           throw new Error(`Photo rejected: ${registration.reasons.join(", ")}`);
         }
         if (!registration.upload_url || !registration.upload_fields) {
@@ -91,18 +134,18 @@ export function Upload({ onSessionReady }: { onSessionReady: (sessionId: string)
 
   return (
     <section className="panel upload-panel">
-      <h3 className="section-title">Upload your photo set</h3>
+      <h3 className="section-title upload-title">Upload your photo set</h3>
       <p className="section-note">
         Select 6 to 15 selfies captured in natural light for your most consistent profile.
       </p>
 
       <label className={`upload-field${busy ? " is-disabled" : ""}`}>
         <span className="upload-field-label">Choose photos</span>
-        <span className="upload-field-hint">Accepted: JPG, PNG, HEIC, HEIF</span>
+        <span className="upload-field-hint">You can upload a JPG, PNG, HEIC, or HEIF</span>
         <input
           className="visually-hidden"
           type="file"
-          accept="image/*"
+          accept=".jpg,.jpeg,.png,.heic,.heif,image/jpeg,image/png,image/heic,image/heif"
           multiple
           onChange={onFileChange}
           disabled={busy}
