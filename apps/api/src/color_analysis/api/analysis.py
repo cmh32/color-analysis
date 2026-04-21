@@ -63,16 +63,18 @@ async def result(
     session_id: str,
     session: AnalysisSession = Depends(get_session_or_404),
     db: AsyncSession = Depends(db_session_dep),
+    r2: R2Client = Depends(r2_dep),
     redis: RedisQueue = Depends(redis_dep),
 ) -> AnalysisResult:
     del session_id
-    service = AnalysisService(db, redis)
+    service = AnalysisService(db, redis, r2)
     classification = await service.get_classification(session.id)
     if classification is None:
         raise ApiError(404, "Not Found", "Result not ready", "result_not_ready")
 
     aggregated_features = await service.get_aggregated_features(session.id)
-    return format_result(classification, aggregated_features)
+    measurement_photos = await service.get_measurement_photos(session)
+    return format_result(classification, aggregated_features, measurement_photos)
 
 
 @router.get("/review", response_model=SessionReviewResponse, responses=DEFAULT_ERROR_RESPONSES)

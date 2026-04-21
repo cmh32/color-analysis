@@ -1011,6 +1011,16 @@
               }
             ],
             "title": "Color Swatches"
+          },
+          "measurement_explanation": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/MeasurementExplanation"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "type": "object",
@@ -1047,6 +1057,265 @@
           "accepted"
         ],
         "title": "AnalyzeResponse"
+      },
+      "AxisExplanation": {
+        "properties": {
+          "key": {
+            "type": "string",
+            "enum": [
+              "warmth",
+              "value",
+              "chroma",
+              "contrast"
+            ],
+            "title": "Key"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "summary": {
+            "type": "string",
+            "title": "Summary"
+          }
+        },
+        "type": "object",
+        "required": [
+          "key",
+          "label",
+          "summary"
+        ],
+        "title": "AxisExplanation"
+      },
+      "MeasurementDetail": {
+        "properties": {
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "value": {
+            "type": "string",
+            "title": "Value"
+          }
+        },
+        "type": "object",
+        "required": [
+          "label",
+          "value"
+        ],
+        "title": "MeasurementDetail"
+      },
+      "MeasurementExplanation": {
+        "properties": {
+          "note": {
+            "type": "string",
+            "title": "Note"
+          },
+          "photos": {
+            "items": {
+              "$ref": "#/components/schemas/MeasurementPhoto"
+            },
+            "type": "array",
+            "title": "Photos"
+          },
+          "readings": {
+            "items": {
+              "$ref": "#/components/schemas/MeasurementReading"
+            },
+            "type": "array",
+            "title": "Readings"
+          },
+          "axis_explanations": {
+            "items": {
+              "$ref": "#/components/schemas/AxisExplanation"
+            },
+            "type": "array",
+            "title": "Axis Explanations"
+          }
+        },
+        "type": "object",
+        "required": [
+          "note",
+          "photos",
+          "readings",
+          "axis_explanations"
+        ],
+        "title": "MeasurementExplanation"
+      },
+      "MeasurementOverlay": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "enum": [
+              "skin",
+              "hair",
+              "left_eye",
+              "right_eye"
+            ],
+            "title": "Id"
+          },
+          "group": {
+            "type": "string",
+            "enum": [
+              "skin",
+              "hair",
+              "eyes"
+            ],
+            "title": "Group"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "anchor_x": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Anchor X"
+          },
+          "anchor_y": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Anchor Y"
+          },
+          "polygons": {
+            "items": {
+              "items": {
+                "$ref": "#/components/schemas/MeasurementPoint"
+              },
+              "type": "array"
+            },
+            "type": "array",
+            "title": "Polygons"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "group",
+          "label",
+          "anchor_x",
+          "anchor_y",
+          "polygons"
+        ],
+        "title": "MeasurementOverlay"
+      },
+      "MeasurementPhoto": {
+        "properties": {
+          "photo_id": {
+            "type": "string",
+            "title": "Photo Id"
+          },
+          "filename": {
+            "type": "string",
+            "title": "Filename"
+          },
+          "preview_url": {
+            "type": "string",
+            "title": "Preview Url"
+          },
+          "width": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Width"
+          },
+          "height": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Height"
+          },
+          "is_default": {
+            "type": "boolean",
+            "title": "Is Default",
+            "default": false
+          },
+          "overlays": {
+            "items": {
+              "$ref": "#/components/schemas/MeasurementOverlay"
+            },
+            "type": "array",
+            "title": "Overlays"
+          }
+        },
+        "type": "object",
+        "required": [
+          "photo_id",
+          "filename",
+          "preview_url",
+          "width",
+          "height",
+          "overlays"
+        ],
+        "title": "MeasurementPhoto"
+      },
+      "MeasurementPoint": {
+        "properties": {
+          "x": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "X"
+          },
+          "y": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Y"
+          }
+        },
+        "type": "object",
+        "required": [
+          "x",
+          "y"
+        ],
+        "title": "MeasurementPoint"
+      },
+      "MeasurementReading": {
+        "properties": {
+          "key": {
+            "type": "string",
+            "enum": [
+              "skin",
+              "hair",
+              "eyes"
+            ],
+            "title": "Key"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "summary": {
+            "type": "string",
+            "title": "Summary"
+          },
+          "swatch": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Swatch"
+          },
+          "technical_details": {
+            "items": {
+              "$ref": "#/components/schemas/MeasurementDetail"
+            },
+            "type": "array",
+            "title": "Technical Details"
+          }
+        },
+        "type": "object",
+        "required": [
+          "key",
+          "label",
+          "summary"
+        ],
+        "title": "MeasurementReading"
       },
       "PhotoRegisterRequest": {
         "properties": {

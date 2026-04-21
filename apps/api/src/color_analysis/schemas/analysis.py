@@ -58,6 +58,56 @@ class Reliability(BaseModel):
     reasons: list[str]
 
 
+class MeasurementPoint(BaseModel):
+    x: float = Field(ge=0.0, le=1.0)
+    y: float = Field(ge=0.0, le=1.0)
+
+
+class MeasurementOverlay(BaseModel):
+    id: Literal["skin", "hair", "left_eye", "right_eye"]
+    group: Literal["skin", "hair", "eyes"]
+    label: str
+    anchor_x: float = Field(ge=0.0, le=1.0)
+    anchor_y: float = Field(ge=0.0, le=1.0)
+    polygons: list[list[MeasurementPoint]]
+
+
+class MeasurementPhoto(BaseModel):
+    photo_id: str
+    filename: str
+    preview_url: str
+    width: int = Field(ge=1)
+    height: int = Field(ge=1)
+    is_default: bool = False
+    overlays: list[MeasurementOverlay]
+
+
+class MeasurementDetail(BaseModel):
+    label: str
+    value: str
+
+
+class MeasurementReading(BaseModel):
+    key: Literal["skin", "hair", "eyes"]
+    label: str
+    summary: str
+    swatch: str | None = None
+    technical_details: list[MeasurementDetail] = Field(default_factory=list)
+
+
+class AxisExplanation(BaseModel):
+    key: Literal["warmth", "value", "chroma", "contrast"]
+    label: str
+    summary: str
+
+
+class MeasurementExplanation(BaseModel):
+    note: str
+    photos: list[MeasurementPhoto]
+    readings: list[MeasurementReading]
+    axis_explanations: list[AxisExplanation]
+
+
 class AnalysisResult(BaseModel):
     session_id: str
     top_2_seasons: tuple[Season, Season]
@@ -66,3 +116,4 @@ class AnalysisResult(BaseModel):
     result_state: ResultState
     trace: list[str]
     color_swatches: dict[str, str] | None = None
+    measurement_explanation: MeasurementExplanation | None = None

@@ -3,6 +3,7 @@ import { AxisDials } from "./AxisDials";
 import { ColorSwatches } from "./ColorSwatches";
 import { DeleteButton } from "./DeleteButton";
 import { HowWeMeasured } from "./HowWeMeasured";
+import { MeasurementExplanation } from "./MeasurementExplanation";
 import { ReliabilityBadge } from "./ReliabilityBadge";
 
 type SeasonTone = {
@@ -39,6 +40,7 @@ export function ResultScreen({ result }: { result: ClassificationResult }) {
       </section>
 
       <AxisDials scorecard={result.scorecard} />
+      <MeasurementExplanation explanation={result.measurement_explanation ?? null} />
       <ColorSwatches swatches={result.color_swatches ?? null} />
       <ReliabilityBadge reliability={result.reliability} />
       {result.trace.length > 0 ? <HowWeMeasured traces={result.trace} /> : null}

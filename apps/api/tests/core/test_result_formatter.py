@@ -44,6 +44,8 @@ def test_format_result_prefers_display_prefixed_swatches() -> None:
 
     assert result.color_swatches is not None
     assert result.color_swatches["skin"] == "#bfa089"
+    assert result.measurement_explanation is not None
+    assert result.measurement_explanation.readings[0].summary.startswith("We read your skin as")
 
 
 def test_format_result_falls_back_to_classifier_features_when_display_values_are_missing() -> None:
@@ -62,3 +64,42 @@ def test_format_result_falls_back_to_classifier_features_when_display_values_are
 
     assert result.color_swatches is not None
     assert result.color_swatches["iris"] == "#576d7e"
+
+
+def test_format_result_includes_measurement_explanation_with_photos() -> None:
+    classification = _classification()
+    session_id = classification.session_id
+    features = [
+        _feature(session_id, "display.cheek_left.l_star", 72.0),
+        _feature(session_id, "display.cheek_left.a_star", 6.0),
+        _feature(session_id, "display.cheek_left.b_star", 14.0),
+        _feature(session_id, "display.cheek_right.l_star", 72.0),
+        _feature(session_id, "display.cheek_right.a_star", 6.0),
+        _feature(session_id, "display.cheek_right.b_star", 14.0),
+        _feature(session_id, "cheek_left.l_star", 70.0),
+        _feature(session_id, "cheek_left.a_star", 4.0),
+        _feature(session_id, "cheek_left.b_star", 12.0),
+        _feature(session_id, "cheek_right.l_star", 70.0),
+        _feature(session_id, "cheek_right.a_star", 4.0),
+        _feature(session_id, "cheek_right.b_star", 12.0),
+    ]
+
+    result = format_result(
+        classification,
+        features,
+        measurement_photos=[
+            {
+                "photo_id": "photo-1",
+                "filename": "face.jpg",
+                "preview_url": "https://example.test/face.jpg",
+                "width": 256,
+                "height": 256,
+                "is_default": True,
+                "overlays": [],
+            }
+        ],
+    )
+
+    assert result.measurement_explanation is not None
+    assert result.measurement_explanation.photos[0].is_default is True
+    assert result.measurement_explanation.axis_explanations[0].key == "warmth"

@@ -134,3 +134,71 @@ def build_region_masks(rgb_shape: tuple[int, int, int], landmarks: Landmarks | N
         sclera=sclera,
         hair=hair,
     )
+
+
+def build_overlay_regions(
+    rgb_shape: tuple[int, int, int],
+    landmarks: Landmarks | None,
+) -> list[dict[str, object]]:
+    if landmarks is None:
+        raise ValueError("landmarks are required to build overlay regions")
+
+    height, width, _ = rgb_shape
+    forehead_upper = _points_from_indices(landmarks.mesh_points, _FOREHEAD_UPPER_INDICES)
+    forehead_lower = _points_from_indices(landmarks.mesh_points, _FOREHEAD_LOWER_INDICES)
+    hair_upper = _expand_upper_band(forehead_upper, rgb_shape, landmarks.face_bbox)
+
+    def normalize(points: list[tuple[int, int]]) -> list[dict[str, float]]:
+        if width <= 1 or height <= 1:
+            return [{"x": 0.0, "y": 0.0} for _ in points]
+        return [
+            {
+                "x": max(0.0, min(1.0, point[0] / (width - 1))),
+                "y": max(0.0, min(1.0, point[1] / (height - 1))),
+            }
+            for point in points
+        ]
+
+    def anchor(polygons: list[list[dict[str, float]]]) -> tuple[float, float]:
+        flat = [point for polygon in polygons for point in polygon]
+        if not flat:
+            return 0.5, 0.5
+        x = sum(point["x"] for point in flat) / len(flat)
+        y = sum(point["y"] for point in flat) / len(flat)
+        return x, y
+
+    regions = [
+        {
+            "id": "skin",
+            "group": "skin",
+            "label": "Skin",
+            "polygons": [
+                normalize(_points_from_indices(landmarks.mesh_points, _LEFT_CHEEK_INDICES)),
+                normalize(_points_from_indices(landmarks.mesh_points, _RIGHT_CHEEK_INDICES)),
+                normalize(forehead_upper + forehead_lower),
+            ],
+        },
+        {
+            "id": "hair",
+            "group": "hair",
+            "label": "Hair",
+            "polygons": [normalize(hair_upper + list(reversed(forehead_upper)))],
+        },
+        {
+            "id": "left_eye",
+            "group": "eyes",
+            "label": "Left eye",
+            "polygons": [normalize(_points_from_indices(landmarks.mesh_points, _LEFT_IRIS_INDICES))],
+        },
+        {
+            "id": "right_eye",
+            "group": "eyes",
+            "label": "Right eye",
+            "polygons": [normalize(_points_from_indices(landmarks.mesh_points, _RIGHT_IRIS_INDICES))],
+        },
+    ]
+
+    for region in regions:
+        region["anchor_x"], region["anchor_y"] = anchor(region["polygons"])  # type: ignore[index]
+
+    return regions

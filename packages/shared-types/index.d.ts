@@ -183,6 +183,7 @@ export interface components {
             color_swatches?: {
                 [key: string]: string;
             } | null;
+            measurement_explanation?: components["schemas"]["MeasurementExplanation"] | null;
         };
         /** AnalyzeRequest */
         AnalyzeRequest: {
@@ -196,6 +197,100 @@ export interface components {
         AnalyzeResponse: {
             /** Accepted */
             accepted: boolean;
+        };
+        /** AxisExplanation */
+        AxisExplanation: {
+            /**
+             * Key
+             * @enum {string}
+             */
+            key: "warmth" | "value" | "chroma" | "contrast";
+            /** Label */
+            label: string;
+            /** Summary */
+            summary: string;
+        };
+        /** MeasurementDetail */
+        MeasurementDetail: {
+            /** Label */
+            label: string;
+            /** Value */
+            value: string;
+        };
+        /** MeasurementExplanation */
+        MeasurementExplanation: {
+            /** Note */
+            note: string;
+            /** Photos */
+            photos: components["schemas"]["MeasurementPhoto"][];
+            /** Readings */
+            readings: components["schemas"]["MeasurementReading"][];
+            /** Axis Explanations */
+            axis_explanations: components["schemas"]["AxisExplanation"][];
+        };
+        /** MeasurementOverlay */
+        MeasurementOverlay: {
+            /**
+             * Id
+             * @enum {string}
+             */
+            id: "skin" | "hair" | "left_eye" | "right_eye";
+            /**
+             * Group
+             * @enum {string}
+             */
+            group: "skin" | "hair" | "eyes";
+            /** Label */
+            label: string;
+            /** Anchor X */
+            anchor_x: number;
+            /** Anchor Y */
+            anchor_y: number;
+            /** Polygons */
+            polygons: components["schemas"]["MeasurementPoint"][][];
+        };
+        /** MeasurementPhoto */
+        MeasurementPhoto: {
+            /** Photo Id */
+            photo_id: string;
+            /** Filename */
+            filename: string;
+            /** Preview Url */
+            preview_url: string;
+            /** Width */
+            width: number;
+            /** Height */
+            height: number;
+            /**
+             * Is Default
+             * @default false
+             */
+            is_default: boolean;
+            /** Overlays */
+            overlays: components["schemas"]["MeasurementOverlay"][];
+        };
+        /** MeasurementPoint */
+        MeasurementPoint: {
+            /** X */
+            x: number;
+            /** Y */
+            y: number;
+        };
+        /** MeasurementReading */
+        MeasurementReading: {
+            /**
+             * Key
+             * @enum {string}
+             */
+            key: "skin" | "hair" | "eyes";
+            /** Label */
+            label: string;
+            /** Summary */
+            summary: string;
+            /** Swatch */
+            swatch?: string | null;
+            /** Technical Details */
+            technical_details?: components["schemas"]["MeasurementDetail"][];
         };
         /** PhotoRegisterRequest */
         PhotoRegisterRequest: {
