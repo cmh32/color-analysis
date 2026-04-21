@@ -142,7 +142,7 @@ corepack pnpm --filter @color-analysis/web dev
 
 ## Troubleshooting: Can't Connect to Server
 
-If the browser shows a connection error, one of the local dev servers is usually not running.
+If the browser shows a connection error or analysis stays stuck on "Curating your profile", one of the local dev processes is usually not running.
 
 One-command restart (recommended):
 
@@ -150,7 +150,9 @@ One-command restart (recommended):
 ./scripts/restart-dev.sh
 ```
 
-Start/restart both servers in separate terminals:
+`restart-dev.sh` now starts infra + API + worker + web and writes logs to `${TMPDIR:-/tmp}/color-analysis`.
+
+Start/restart all three app processes in separate terminals:
 
 1. API (terminal 1):
 
@@ -160,7 +162,17 @@ python -m pip install -e '.[dev]'  # first-time setup only
 uvicorn color_analysis.main:app --app-dir src --port 8000
 ```
 
-2. Web (terminal 2):
+2. Worker (terminal 2):
+
+```bash
+cd apps/api
+. .venv/bin/activate
+export PYTHONPATH=src
+export OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YES
+python -m color_analysis.workers.main
+```
+
+3. Web (terminal 3):
 
 ```bash
 corepack pnpm install  # first-time setup only
@@ -172,6 +184,9 @@ Quick checks:
 ```bash
 curl -sS http://127.0.0.1:8000/health
 # expected: {"status":"ok"}
+
+pgrep -fl "color_analysis.workers.main"
+# expected: one running worker process
 ```
 
 Open `http://localhost:3000` for the web UI.
