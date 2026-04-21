@@ -1,8 +1,8 @@
 export function HowWeMeasured({ traces }: { traces: string[] }) {
   return (
-    <details className="card">
+    <details className="panel details-panel">
       <summary>How We Measured This</summary>
-      <ul>
+      <ul className="details-list">
         {traces.map((trace, index) => (
           <li key={`${trace}-${index}`}>{trace}</li>
         ))}

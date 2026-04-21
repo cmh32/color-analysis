@@ -1,4 +1,4 @@
-import type { ClassificationResult } from "@color-analysis/shared-types";
+import type { ClassificationResult } from "./types";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
 const API_REQUEST_TIMEOUT_MS = 30_000;

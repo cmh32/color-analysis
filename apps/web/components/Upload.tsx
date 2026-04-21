@@ -25,11 +25,14 @@ export function Upload({ onSessionReady }: { onSessionReady: (sessionId: string)
   const [busy, setBusy] = useState(false);
   const [statusMessage, setStatusMessage] = useState("Preparing analysis...");
   const [error, setError] = useState<string | null>(null);
+  const [fileCount, setFileCount] = useState(0);
 
   const onFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(event.target.files ?? []);
-    if (files.length < 6) {
-      setError("Upload at least 6 photos to analyze.");
+    setFileCount(files.length);
+
+    if (files.length < 6 || files.length > 15) {
+      setError("Upload between 6 and 15 photos to analyze.");
       return;
     }
 
@@ -87,11 +90,33 @@ export function Upload({ onSessionReady }: { onSessionReady: (sessionId: string)
   };
 
   return (
-    <section className="card">
-      <h3>Upload Photos</h3>
-      <input type="file" accept="image/*" multiple onChange={onFileChange} disabled={busy} />
-      {busy ? <p>{statusMessage}</p> : null}
-      {error ? <p style={{ color: "#b91c1c" }}>{error}</p> : null}
+    <section className="panel upload-panel">
+      <h3 className="section-title">Upload your photo set</h3>
+      <p className="section-note">
+        Select 6 to 15 selfies captured in natural light for your most consistent profile.
+      </p>
+
+      <label className={`upload-field${busy ? " is-disabled" : ""}`}>
+        <span className="upload-field-label">Choose photos</span>
+        <span className="upload-field-hint">Accepted: JPG, PNG, HEIC, HEIF</span>
+        <input
+          className="visually-hidden"
+          type="file"
+          accept="image/*"
+          multiple
+          onChange={onFileChange}
+          disabled={busy}
+        />
+      </label>
+
+      {fileCount > 0 ? (
+        <p className="status-line">
+          <strong>{fileCount}</strong> photo{fileCount === 1 ? "" : "s"} selected
+        </p>
+      ) : null}
+
+      {busy ? <p className="status-line">{statusMessage}</p> : null}
+      {error ? <p className="status-line status-error">{error}</p> : null}
     </section>
   );
 }

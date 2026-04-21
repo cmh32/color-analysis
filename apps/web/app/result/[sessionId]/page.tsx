@@ -2,9 +2,9 @@
 
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
-import type { ClassificationResult } from "@color-analysis/shared-types";
 import { ResultScreen } from "../../../components/ResultScreen";
 import { getResult } from "../../../lib/api";
+import type { ClassificationResult } from "../../../lib/types";
 
 export default function ResultPage() {
   const params = useParams<{ sessionId: string }>();
@@ -32,10 +32,30 @@ export default function ResultPage() {
   }, [sessionId]);
 
   return (
-    <main>
-      <h1>Result</h1>
-      {error ? <p style={{ color: "#b91c1c" }}>{error}</p> : null}
-      {result ? <ResultScreen result={result} /> : <p>Loading result...</p>}
+    <main className="page">
+      <section className="hero">
+        <span className="eyebrow">Result</span>
+        <h1>Your Seasonal Color Report</h1>
+        <p className="lede">
+          This profile combines your uploaded photo set into a top seasonal match and a
+          confidence summary.
+        </p>
+      </section>
+
+      {error ? (
+        <section className="panel panel-error">
+          <h3 className="section-title">Unable to load your result</h3>
+          <p className="status-error">{error}</p>
+        </section>
+      ) : null}
+
+      {result ? (
+        <ResultScreen result={result} />
+      ) : (
+        <section className="panel panel-soft">
+          <p className="loading-copy">Preparing your report...</p>
+        </section>
+      )}
     </main>
   );
 }

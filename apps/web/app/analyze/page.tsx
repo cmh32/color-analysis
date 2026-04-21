@@ -10,16 +10,22 @@ import { saveSessionId } from "../../lib/session";
 
 type ErrorInfo = { heading: string; detail: string };
 
+const STATUS_LABELS: Record<string, string> = {
+  pending: "Queueing your analysis session...",
+  running: "Reviewing your color attributes...",
+  complete: "Finalizing your profile..."
+};
+
 export default function AnalyzePage() {
   const router = useRouter();
   const [sessionId, setSessionId] = useState<string | null>(null);
-  const [statusMessage, setStatusMessage] = useState("Analyzing...");
+  const [statusMessage, setStatusMessage] = useState("Preparing your analysis...");
   const [errorInfo, setErrorInfo] = useState<ErrorInfo | null>(null);
 
   const handleSessionReady = (id: string) => {
     saveSessionId(id);
     setErrorInfo(null);
-    setStatusMessage("Analyzing...");
+    setStatusMessage("Preparing your analysis...");
     setSessionId(id);
   };
 
@@ -40,7 +46,7 @@ export default function AnalyzePage() {
       if (attempt >= MAX_ATTEMPTS) {
         setErrorInfo({
           heading: "Analysis timed out",
-          detail: "The analysis is taking too long. Please try again.",
+          detail: "This session is taking too long. Please start a new upload."
         });
         return;
       }
@@ -57,7 +63,7 @@ export default function AnalyzePage() {
             setErrorInfo({
               heading: "Not enough usable photos",
               detail:
-                "At least 6 clear face photos are required. Try again with better lighting, a direct angle, and no sunglasses.",
+                "At least 6 clear face photos are required. Retry with brighter lighting and direct angles."
             });
             return;
           }
@@ -68,14 +74,14 @@ export default function AnalyzePage() {
         if (status.status === "failed") {
           setErrorInfo({
             heading: "Analysis failed",
-            detail: "Something went wrong on our end. Please try again.",
+            detail: "Something went wrong on our side. Please try again shortly."
           });
           return;
         }
 
-        setStatusMessage(`Status: ${status.status}`);
+        setStatusMessage(STATUS_LABELS[status.status] ?? `Status: ${status.status}`);
       } catch {
-        // network blip — keep polling
+        // Ignore transient network errors and keep polling.
       }
 
       window.setTimeout(poll, delay);
@@ -90,16 +96,30 @@ export default function AnalyzePage() {
   const isPolling = sessionId !== null && errorInfo === null;
 
   return (
-    <main>
-      <h1>Analyze</h1>
+    <main className="page">
+      <section className="hero">
+        <span className="eyebrow">Analyze</span>
+        <h1>Build your personalized color profile.</h1>
+        <p className="lede">
+          Upload a curated set of selfies and we will estimate your top seasonal family,
+          confidence level, and measurement trace.
+        </p>
+      </section>
+
       <GuidanceChecklist />
+
       {!isPolling && !errorInfo && <Upload onSessionReady={handleSessionReady} />}
       {isPolling && <ProgressSpinner message={statusMessage} />}
+
       {errorInfo && (
-        <section className="card">
-          <h3>{errorInfo.heading}</h3>
-          <p>{errorInfo.detail}</p>
-          <button onClick={handleRetry}>Try again</button>
+        <section className="panel panel-error">
+          <h3 className="section-title">{errorInfo.heading}</h3>
+          <p className="section-note">{errorInfo.detail}</p>
+          <div className="actions">
+            <button className="button button-primary" onClick={handleRetry}>
+              Try Again
+            </button>
+          </div>
         </section>
       )}
     </main>

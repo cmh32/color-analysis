@@ -1,8 +1,9 @@
 export function ProgressSpinner({ message }: { message: string }) {
   return (
-    <section className="card" aria-live="polite">
-      <h3>Analyzing</h3>
-      <p>{message}</p>
+    <section className="panel panel-soft progress-panel" aria-live="polite">
+      <div className="spinner" />
+      <h3 className="section-title">Curating your profile</h3>
+      <p className="status-line">{message}</p>
     </section>
   );
 }

@@ -1,29 +1,69 @@
 import Link from "next/link";
 
+const previewSwatches = [
+  { name: "Blush", toneClass: "tone-blush" },
+  { name: "Lilac", toneClass: "tone-lilac" },
+  { name: "Butter", toneClass: "tone-butter" },
+  { name: "Sage", toneClass: "tone-sage" },
+  { name: "Powder", toneClass: "tone-powder" }
+];
+
 export default function HomePage() {
   return (
-    <main>
-      <h1>Seasonal Color Analysis</h1>
-      <p>
-        Upload 6 to 15 selfies. We return a top-2 season estimate, reliability,
-        and a transparent measurement trace.
-      </p>
-      <div className="card">
-        <h2>Before You Start</h2>
-        <ul>
-          <li>Natural light near a window</li>
-          <li>No beauty filters</li>
-          <li>Hair pulled back when possible</li>
-          <li>No heavy makeup</li>
-        </ul>
-      </div>
-      <div className="row">
-        <Link href="/analyze">
-          <button style={{ background: "var(--accent)", color: "white" }}>
+    <main className="page">
+      <section className="hero">
+        <span className="eyebrow">Seasonal Color Studio</span>
+        <h1>Your color profile, styled like a beauty editorial.</h1>
+        <p className="lede">
+          Share 6 to 15 natural selfies and receive your top seasonal palette with an
+          easy-to-read confidence summary and transparent measurement details.
+        </p>
+        <div className="actions">
+          <Link href="/analyze" className="button button-primary">
             Start Analysis
-          </button>
-        </Link>
-      </div>
+          </Link>
+          <a href="#prep" className="button button-secondary">
+            View Prep Guide
+          </a>
+        </div>
+      </section>
+
+      <section className="panel panel-soft">
+        <h3 className="section-title">Collectible-style swatch preview</h3>
+        <p className="section-note">
+          Your final report highlights seasonal tendencies with soft, tactile swatch cards.
+        </p>
+        <div className="swatch-grid" style={{ marginTop: "0.8rem" }}>
+          {previewSwatches.map((swatch) => (
+            <article className="swatch-card" key={swatch.name}>
+              <div className={`swatch-chip ${swatch.toneClass}`} />
+              <strong>{swatch.name}</strong>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      <section className="panel" id="prep">
+        <h3 className="section-title">Before you begin</h3>
+        <ul className="guidance-grid" style={{ marginTop: "0.75rem" }}>
+          <li className="guidance-item">
+            <p className="guidance-title">Natural window light</p>
+            <p className="guidance-detail">Stand near daylight and avoid overhead yellow light.</p>
+          </li>
+          <li className="guidance-item">
+            <p className="guidance-title">No filters</p>
+            <p className="guidance-detail">Upload original photos without beauty effects.</p>
+          </li>
+          <li className="guidance-item">
+            <p className="guidance-title">Face visible</p>
+            <p className="guidance-detail">Hair pulled back helps skin undertone read more accurately.</p>
+          </li>
+          <li className="guidance-item">
+            <p className="guidance-title">Light makeup</p>
+            <p className="guidance-detail">Try minimal coverage so natural contrast remains clear.</p>
+          </li>
+        </ul>
+      </section>
     </main>
   );
 }
