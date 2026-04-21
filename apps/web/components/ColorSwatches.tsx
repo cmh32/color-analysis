@@ -9,23 +9,39 @@ export function ColorSwatches({
   swatches: ClassificationResult["color_swatches"];
 }) {
   if (!swatches) return null;
-  const entries = ORDER.filter((k) => k in swatches);
-  if (entries.length === 0) return null;
 
   return (
     <section className="panel">
       <h3 className="section-title">Your measured colors</h3>
       <p className="section-note">Colors extracted by CV from your photos.</p>
       <div className="result-season" style={{ marginTop: "0.85rem" }}>
-        {entries.map((key) => (
-          <article className="swatch-card" key={key}>
-            <div className="swatch-chip" style={{ backgroundColor: swatches[key] }} />
-            <strong>{LABELS[key]}</strong>
-            <p className="section-note" style={{ fontFamily: "monospace" }}>
-              {swatches[key]}
-            </p>
-          </article>
-        ))}
+        {ORDER.map((key) => {
+          const hex = swatches[key];
+          if (hex) {
+            return (
+              <article className="swatch-card" key={key}>
+                <div className="swatch-chip" style={{ backgroundColor: hex }} />
+                <strong>{LABELS[key]}</strong>
+                <p className="section-note" style={{ fontFamily: "monospace" }}>
+                  {hex}
+                </p>
+              </article>
+            );
+          }
+          return (
+            <article className="swatch-card" key={key} style={{ opacity: 0.5 }}>
+              <div
+                className="swatch-chip"
+                style={{
+                  background:
+                    "repeating-linear-gradient(45deg, #ccc 0px, #ccc 4px, #eee 4px, #eee 8px)",
+                }}
+              />
+              <strong>{LABELS[key]}</strong>
+              <p className="section-note">couldn&apos;t measure</p>
+            </article>
+          );
+        })}
       </div>
     </section>
   );
