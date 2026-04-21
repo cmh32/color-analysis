@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime, timedelta, timezone
 
-from sqlalchemy import DateTime, ForeignKey, Numeric, String, func
+from sqlalchemy import DateTime, Float, ForeignKey, String, func
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -17,7 +17,7 @@ class AnalysisSession(Base):
     )
     status: Mapped[str] = mapped_column(String(32), default="pending")
     result_state: Mapped[str | None] = mapped_column(String(64), nullable=True)
-    reliability: Mapped[float | None] = mapped_column(Numeric(4, 3), nullable=True)
+    reliability: Mapped[float | None] = mapped_column(Float, nullable=True)
     reliability_bucket: Mapped[str | None] = mapped_column(String(16), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     expires_at: Mapped[datetime] = mapped_column(

@@ -42,6 +42,12 @@ class R2Client:
 
     def list_by_session_prefix(self, session_id: str) -> list[str]:
         prefix = f"sessions/{session_id}/"
-        response = self.client.list_objects_v2(Bucket=self.bucket, Prefix=prefix)
-        contents = response.get("Contents", [])
-        return [item["Key"] for item in contents if "Key" in item]
+        keys: list[str] = []
+        kwargs: dict = {"Bucket": self.bucket, "Prefix": prefix}
+        while True:
+            response = self.client.list_objects_v2(**kwargs)
+            keys.extend(item["Key"] for item in response.get("Contents", []) if "Key" in item)
+            if not response.get("IsTruncated"):
+                break
+            kwargs["ContinuationToken"] = response["NextContinuationToken"]
+        return keys

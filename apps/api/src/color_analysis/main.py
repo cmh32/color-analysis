@@ -6,12 +6,13 @@ from color_analysis.api.analysis import router as analysis_router
 from color_analysis.api.errors import register_error_handlers
 from color_analysis.api.photos import router as photos_router
 from color_analysis.api.sessions import router as sessions_router
+from color_analysis.config import get_settings
 
 app = FastAPI(title="Color Analysis API", version="0.1.0")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],
+    allow_origins=get_settings().cors_allowed_origins,
     allow_methods=["*"],
     allow_headers=["*"],
 )

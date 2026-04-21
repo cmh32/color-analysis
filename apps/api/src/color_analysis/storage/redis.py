@@ -18,6 +18,11 @@ class RedisQueue:
         self.connection.setex(f"session:{session_id}:result", ttl_seconds, value)
 
     def delete_session_keys(self, session_id: str) -> None:
-        keys = self.connection.keys(f"session:{session_id}:*")
-        if keys:
-            self.connection.delete(*keys)
+        cursor = 0
+        pattern = f"session:{session_id}:*"
+        while True:
+            cursor, keys = self.connection.scan(cursor, match=pattern, count=100)
+            if keys:
+                self.connection.delete(*keys)
+            if cursor == 0:
+                break

@@ -37,7 +37,7 @@ async def _run(session_id: str) -> None:
             try:
                 payload = r2.get_object_bytes(photo.storage_key)
             except Exception:
-                payload = b""
+                continue
             inputs.append(PhotoInput(id=str(photo.id), filename=photo.filename, payload=payload))
 
         try:
@@ -133,6 +133,7 @@ async def _run(session_id: str) -> None:
             session_obj.reliability_bucket = result.reliability.bucket
             await db.commit()
         except Exception:
+            await db.rollback()
             session_obj.status = "failed"
             session_obj.result_state = "failed"
             await db.commit()

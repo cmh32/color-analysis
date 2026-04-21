@@ -1,3 +1,4 @@
+import hmac
 import uuid
 from collections.abc import AsyncGenerator
 
@@ -18,7 +19,7 @@ async def db_session_dep() -> AsyncGenerator[AsyncSession, None]:
 
 def require_admin_token(x_admin_token: str = Header(default="")) -> None:
     settings = get_settings()
-    if x_admin_token != settings.admin_trace_token:
+    if not hmac.compare_digest(x_admin_token, settings.admin_trace_token):
         raise ApiError(403, "Forbidden", "Invalid admin token", "forbidden")
 
 
