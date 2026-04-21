@@ -65,6 +65,22 @@ def _expand_upper_band(
     return expanded
 
 
+def _interpolate_band(
+    lower: list[tuple[int, int]],
+    upper: list[tuple[int, int]],
+    *,
+    t: float,
+) -> list[tuple[int, int]]:
+    t = max(0.0, min(1.0, t))
+    return [
+        (
+            int(round(x0 + ((x1 - x0) * t))),
+            int(round(y0 + ((y1 - y0) * t))),
+        )
+        for (x0, y0), (x1, y1) in zip(lower, upper, strict=False)
+    ]
+
+
 def _face_area(face_bbox: tuple[int, int, int, int]) -> int:
     x0, y0, x1, y1 = face_bbox
     return max(1, (x1 - x0) * (y1 - y0))
@@ -122,7 +138,8 @@ def build_region_masks(rgb_shape: tuple[int, int, int], landmarks: Landmarks | N
     sclera = (sclera_left | sclera_right) & ~(iris_left | iris_right)
 
     hair_upper = _expand_upper_band(forehead_upper, rgb_shape, landmarks.face_bbox)
-    hair = _polygon_mask(shape, hair_upper + list(reversed(forehead_upper)))
+    hair_lower = _interpolate_band(forehead_upper, hair_upper, t=0.35)
+    hair = _polygon_mask(shape, hair_upper + list(reversed(hair_lower)))
 
     return RegionMasks(
         photo_id=landmarks.photo_id,
@@ -147,6 +164,7 @@ def build_overlay_regions(
     forehead_upper = _points_from_indices(landmarks.mesh_points, _FOREHEAD_UPPER_INDICES)
     forehead_lower = _points_from_indices(landmarks.mesh_points, _FOREHEAD_LOWER_INDICES)
     hair_upper = _expand_upper_band(forehead_upper, rgb_shape, landmarks.face_bbox)
+    hair_lower = _interpolate_band(forehead_upper, hair_upper, t=0.35)
 
     def normalize(points: list[tuple[int, int]]) -> list[dict[str, float]]:
         if width <= 1 or height <= 1:
@@ -182,7 +200,7 @@ def build_overlay_regions(
             "id": "hair",
             "group": "hair",
             "label": "Hair",
-            "polygons": [normalize(hair_upper + list(reversed(forehead_upper)))],
+            "polygons": [normalize(hair_upper + list(reversed(hair_lower)))],
         },
         {
             "id": "left_eye",

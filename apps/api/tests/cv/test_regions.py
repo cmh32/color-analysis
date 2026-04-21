@@ -44,3 +44,16 @@ def test_sclera_excludes_iris_pixels() -> None:
 def test_region_masks_require_landmarks() -> None:
     with pytest.raises(ValueError, match="landmarks are required"):
         build_region_masks((800, 640, 3), None)
+
+
+def test_hair_mask_stays_above_forehead_boundary() -> None:
+    landmarks = synthetic_landmarks()
+
+    masks = build_region_masks((480, 640, 3), landmarks)
+
+    forehead_ys, _ = np.nonzero(masks.forehead)
+    hair_ys, _ = np.nonzero(masks.hair)
+
+    assert hair_ys.size > 0
+    assert forehead_ys.size > 0
+    assert int(hair_ys.max()) < int(np.quantile(forehead_ys, 0.3))
