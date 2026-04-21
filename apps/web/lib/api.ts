@@ -1,6 +1,9 @@
 import type { ClassificationResult } from "@color-analysis/shared-types";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
+const API_REQUEST_TIMEOUT_MS = 30_000;
+const UPLOAD_REQUEST_TIMEOUT_MS = 180_000;
+
 type PhotoRegisterResponse = {
   id: string;
   accepted: boolean;
@@ -9,15 +12,45 @@ type PhotoRegisterResponse = {
   upload_fields?: Record<string, string> | null;
 };
 
+function isAbortError(error: unknown): boolean {
+  return error instanceof Error && error.name === "AbortError";
+}
+
+async function fetchWithTimeout(
+  url: string,
+  init: RequestInit,
+  timeoutMs: number,
+  operation: string
+): Promise<Response> {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
+  try {
+    return await fetch(url, { ...init, signal: controller.signal });
+  } catch (error) {
+    if (isAbortError(error)) {
+      throw new Error(`${operation} timed out after ${Math.round(timeoutMs / 1000)}s`);
+    }
+    throw error;
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
+
 async function call<T>(path: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(`${API_BASE_URL}${path}`, {
-    ...init,
-    headers: {
-      "Content-Type": "application/json",
-      ...(init?.headers ?? {})
+  const response = await fetchWithTimeout(
+    `${API_BASE_URL}${path}`,
+    {
+      ...init,
+      headers: {
+        "Content-Type": "application/json",
+        ...(init?.headers ?? {})
+      },
+      cache: "no-store"
     },
-    cache: "no-store"
-  });
+    API_REQUEST_TIMEOUT_MS,
+    `API request to ${path}`
+  );
 
   if (!response.ok) {
     const text = await response.text();
@@ -58,10 +91,15 @@ export async function uploadPhoto(
   }
   form.append("file", file);
 
-  const response = await fetch(uploadUrl, {
-    method: "POST",
-    body: form
-  });
+  const response = await fetchWithTimeout(
+    uploadUrl,
+    {
+      method: "POST",
+      body: form
+    },
+    UPLOAD_REQUEST_TIMEOUT_MS,
+    `Upload for ${file.name}`
+  );
 
   if (!response.ok) {
     const text = await response.text();

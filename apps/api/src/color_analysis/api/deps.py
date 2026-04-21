@@ -36,13 +36,15 @@ def require_admin_token(x_admin_token: str = Header(default="")) -> None:
 async def get_session_or_404(
     session_id: str,
     db: AsyncSession = Depends(db_session_dep),
+    r2: R2Client = Depends(r2_dep),
+    redis: RedisQueue = Depends(redis_dep),
 ) -> AnalysisSession:
     try:
         parsed = uuid.UUID(session_id)
     except ValueError as exc:
         raise ApiError(400, "Invalid Session", "Session ID is invalid", "invalid_session") from exc
 
-    session_service = SessionService(db)
+    session_service = SessionService(db, r2, redis)
     session = await session_service.get_session_or_none(parsed)
     if session is None:
         raise ApiError(404, "Not Found", "Session not found", "session_not_found")
