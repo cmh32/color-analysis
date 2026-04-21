@@ -5,7 +5,7 @@ from pathlib import Path
 
 import mediapipe as mp
 
-from color_analysis.cv.types import DecodedPhoto, Landmarks
+from color_analysis.cv.types import DecodedPhoto, LandmarkDetection, Landmarks
 
 logger = logging.getLogger(__name__)
 
@@ -46,7 +46,7 @@ def _get_face_landmarker() -> mp.tasks.vision.FaceLandmarker | None:
         options = mp.tasks.vision.FaceLandmarkerOptions(
             base_options=mp.tasks.BaseOptions(model_asset_path=str(_MODEL_PATH)),
             running_mode=mp.tasks.vision.RunningMode.IMAGE,
-            num_faces=1,
+            num_faces=4,
             output_face_blendshapes=False,
             output_facial_transformation_matrixes=False,
         )
@@ -58,16 +58,17 @@ def _get_face_landmarker() -> mp.tasks.vision.FaceLandmarker | None:
     return _face_landmarker
 
 
-def detect_landmarks(photo: DecodedPhoto) -> Landmarks | None:
+def detect_landmarks(photo: DecodedPhoto) -> LandmarkDetection:
     height, width, _ = photo.rgb.shape
     mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=photo.rgb)
     landmarker = _get_face_landmarker()
     if landmarker is None:
-        return None
+        return LandmarkDetection(face_count=0, landmarks=None, available=False)
     result = landmarker.detect(mp_image)
 
-    if not result.face_landmarks:
-        return None
+    face_count = len(result.face_landmarks)
+    if face_count != 1:
+        return LandmarkDetection(face_count=face_count, landmarks=None, available=True)
 
     lm = result.face_landmarks[0]
 
@@ -84,9 +85,13 @@ def detect_landmarks(photo: DecodedPhoto) -> Landmarks | None:
     left_eye = (int(lm[468].x * width), int(lm[468].y * height))
     right_eye = (int(lm[473].x * width), int(lm[473].y * height))
 
-    return Landmarks(
-        photo_id=photo.id,
-        face_bbox=(x0, y0, x1, y1),
-        left_eye_center=left_eye,
-        right_eye_center=right_eye,
+    return LandmarkDetection(
+        face_count=1,
+        landmarks=Landmarks(
+            photo_id=photo.id,
+            face_bbox=(x0, y0, x1, y1),
+            left_eye_center=left_eye,
+            right_eye_center=right_eye,
+        ),
+        available=True,
     )

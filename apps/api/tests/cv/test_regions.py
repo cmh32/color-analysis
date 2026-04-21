@@ -11,11 +11,11 @@ from color_analysis.cv.types import PhotoInput
 def test_region_masks_have_pixels() -> None:
     fixture = Path(__file__).resolve().parents[1] / "fixtures/happy_path/photo_3.jpg"
     decoded = decode_photo(PhotoInput(id="3", filename=fixture.name, payload=fixture.read_bytes()))
-    landmarks = detect_landmarks(decoded)
-    if landmarks is None:
+    detection = detect_landmarks(decoded)
+    if not detection.available or detection.landmarks is None:
         pytest.skip("MediaPipe face landmarker unavailable for fixture-based region test")
 
-    masks = build_region_masks(decoded.rgb.shape, landmarks)
+    masks = build_region_masks(decoded.rgb.shape, detection.landmarks)
 
     assert masks.cheek_left.any()
     assert masks.cheek_right.any()

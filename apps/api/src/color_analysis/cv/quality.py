@@ -1,6 +1,7 @@
 import numpy as np
 
-from color_analysis.cv.types import DecodedPhoto, QualityReport
+from color_analysis.cv.landmarks import detect_landmarks
+from color_analysis.cv.types import DecodedPhoto, LandmarkDetection, QualityReport
 
 try:
     import cv2  # type: ignore[import-not-found]
@@ -8,7 +9,10 @@ except ModuleNotFoundError:  # pragma: no cover - dependency optional in local b
     cv2 = None
 
 
-def evaluate_quality(photo: DecodedPhoto) -> QualityReport:
+def evaluate_quality(photo: DecodedPhoto, detection: LandmarkDetection | None = None) -> QualityReport:
+    if detection is None:
+        detection = detect_landmarks(photo)
+
     if cv2 is not None:
         gray = cv2.cvtColor(photo.rgb, cv2.COLOR_RGB2GRAY)
         blur_score = float(cv2.Laplacian(gray, cv2.CV_64F).var())
@@ -27,6 +31,12 @@ def evaluate_quality(photo: DecodedPhoto) -> QualityReport:
 
     reasons: list[str] = []
     accepted = True
+    if detection.available and detection.face_count == 0:
+        accepted = False
+        reasons.append("no_face_detected")
+    if detection.available and detection.face_count > 1:
+        accepted = False
+        reasons.append("multiple_subjects")
     if blur_score < 35.0:
         accepted = False
         reasons.append("blurry")
@@ -39,7 +49,7 @@ def evaluate_quality(photo: DecodedPhoto) -> QualityReport:
         accepted=accepted,
         blur_score=blur_score,
         exposure_score=exposure_score,
-        face_count=1,
+        face_count=detection.face_count,
         yaw_degrees=0.0,
         pitch_degrees=0.0,
         reasons=tuple(reasons),

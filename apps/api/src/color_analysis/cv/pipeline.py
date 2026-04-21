@@ -10,7 +10,7 @@ from color_analysis.cv.landmarks import detect_landmarks
 from color_analysis.cv.quality import evaluate_quality
 from color_analysis.cv.regions import build_region_masks
 from color_analysis.cv.scorecard import build_scorecard
-from color_analysis.cv.types import DecodedPhoto, PipelineResult, PhotoInput, QualityReport
+from color_analysis.cv.types import DecodedPhoto, Landmarks, PipelineResult, PhotoInput, QualityReport
 from color_analysis.cv.white_balance import apply_white_balance
 
 
@@ -62,14 +62,15 @@ def run(inputs: Iterable[PhotoInput]) -> PipelineResult:
     trace: list[str] = []
 
     quality_reports: dict[str, QualityReport] = {}
-    accepted: list[DecodedPhoto] = []
+    accepted: list[tuple[DecodedPhoto, Landmarks | None]] = []
     for item in inputs:
         try:
             decoded = decode_photo(item)
-            report = evaluate_quality(decoded)
+            detection = detect_landmarks(decoded)
+            report = evaluate_quality(decoded, detection)
             quality_reports[decoded.id] = report
             if report.accepted:
-                accepted.append(decoded)
+                accepted.append((decoded, detection.landmarks))
         except Exception:
             quality_reports[item.id] = QualityReport(
                 photo_id=item.id,
@@ -85,23 +86,29 @@ def run(inputs: Iterable[PhotoInput]) -> PipelineResult:
     trace.append("decode+quality")
 
     if len(accepted) < 6:
+        if len(accepted) == 0:
+            if any("multiple_subjects" in report.reasons for report in quality_reports.values()):
+                trace.append("quality:multiple_subjects")
+                return _empty_result("multiple_subjects", trace, quality_reports)
+            if any("no_face_detected" in report.reasons for report in quality_reports.values()):
+                trace.append("quality:no_face_detected")
+                return _empty_result("no_face_detected", trace, quality_reports)
         return _empty_result("insufficient_photos", trace, quality_reports)
 
     all_features = []
     wb_confidence: dict[str, float] = {}
     photos_with_landmarks = 0
     photos_with_processing_errors = 0
+    saw_multiple_subjects = False
 
-    for photo in accepted:
-        try:
-            landmarks = detect_landmarks(photo)
-        except Exception:
-            photos_with_processing_errors += 1
-            trace.append(f"{photo.id}:landmark_detection_failed")
-            continue
-
+    for photo, landmarks in accepted:
         if landmarks is None:
-            trace.append(f"{photo.id}:no_face")
+            report = quality_reports.get(photo.id)
+            if report is not None and report.face_count > 1:
+                saw_multiple_subjects = True
+                trace.append(f"{photo.id}:multiple_subjects")
+            else:
+                trace.append(f"{photo.id}:no_face")
             continue
         try:
             photos_with_landmarks += 1
@@ -120,6 +127,9 @@ def run(inputs: Iterable[PhotoInput]) -> PipelineResult:
         if photos_with_processing_errors > 0:
             trace.append("pipeline:processing_failed")
             return _empty_result("failed", trace, quality_reports)
+        if saw_multiple_subjects:
+            trace.append("landmarks:multiple_subjects")
+            return _empty_result("multiple_subjects", trace, quality_reports)
         trace.append("landmarks:no_face_detected")
         return _empty_result("no_face_detected", trace, quality_reports)
 

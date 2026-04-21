@@ -42,6 +42,13 @@ class Landmarks:
 
 
 @dataclass(frozen=True)
+class LandmarkDetection:
+    face_count: int
+    landmarks: Landmarks | None
+    available: bool
+
+
+@dataclass(frozen=True)
 class RegionMasks:
     photo_id: str
     cheek_left: np.ndarray
