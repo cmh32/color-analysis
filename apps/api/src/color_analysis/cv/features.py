@@ -99,11 +99,13 @@ def _region_feature(photo_id: str, region: str, lab: np.ndarray, mask: np.ndarra
         pixels = np.zeros((1, 3), dtype=np.float32)
     else:
         if region == "hair":
-            # Remove near-white pixels (highlights, scalp, background) before outlier cleanup.
-            # L* > 88 cannot be non-white hair; retaining them skews light hair toward grey.
-            dark_enough = pixels[:, 0] <= 88.0
-            if np.count_nonzero(dark_enough) >= 8:
-                pixels = pixels[dark_enough]
+            # Exclude near-white and achromatic pixels (highlights, background, scalp).
+            # Actual hair — even platinum blonde — has C* >> 6; near-zero chroma means
+            # background or specular regardless of lightness.
+            chroma = np.sqrt(pixels[:, 1] ** 2 + pixels[:, 2] ** 2)
+            has_color = (pixels[:, 0] <= 88.0) & (chroma >= 6.0)
+            if np.count_nonzero(has_color) >= 8:
+                pixels = pixels[has_color]
         pixels = _clean_region_pixels(region, pixels)
 
     l_star = float(np.median(pixels[:, 0]))
