@@ -1,6 +1,7 @@
 from typing import Any
 
 import boto3
+from botocore.exceptions import ClientError
 
 from color_analysis.config import get_settings
 
@@ -18,6 +19,18 @@ class R2Client:
         )
 
     MAX_UPLOAD_BYTES = 25_000_000
+
+    def ensure_bucket_exists(self) -> None:
+        try:
+            self.client.head_bucket(Bucket=self.bucket)
+            return
+        except ClientError as exc:
+            code = str(exc.response.get("Error", {}).get("Code", ""))
+            if code not in {"404", "NotFound", "NoSuchBucket"}:
+                raise
+
+        self.client.create_bucket(Bucket=self.bucket)
+        self.client.head_bucket(Bucket=self.bucket)
 
     def put_presigned_post(self, key: str, expires_in_seconds: int = 300) -> dict[str, Any]:
         return self.client.generate_presigned_post(

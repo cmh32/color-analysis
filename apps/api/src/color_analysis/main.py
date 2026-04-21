@@ -20,6 +20,7 @@ from color_analysis.storage.redis import RedisQueue
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     app.state.r2 = R2Client()
+    app.state.r2.ensure_bucket_exists()
     app.state.redis = RedisQueue()
     yield
 

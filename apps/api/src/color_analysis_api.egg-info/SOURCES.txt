@@ -7,6 +7,7 @@ src/color_analysis/api/admin.py
 src/color_analysis/api/analysis.py
 src/color_analysis/api/deps.py
 src/color_analysis/api/errors.py
+src/color_analysis/api/limiter.py
 src/color_analysis/api/photos.py
 src/color_analysis/api/sessions.py
 src/color_analysis/core/__init__.py

@@ -37,6 +37,10 @@ async function fetchWithTimeout(
   }
 }
 
+function truncate(text: string, maxLength: number = 180): string {
+  return text.length > maxLength ? `${text.slice(0, maxLength)}...` : text;
+}
+
 async function call<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetchWithTimeout(
     `${API_BASE_URL}${path}`,
@@ -91,19 +95,29 @@ export async function uploadPhoto(
   }
   form.append("file", file);
 
-  const response = await fetchWithTimeout(
-    uploadUrl,
-    {
-      method: "POST",
-      body: form
-    },
-    UPLOAD_REQUEST_TIMEOUT_MS,
-    `Upload for ${file.name}`
-  );
+  let response: Response;
+  try {
+    response = await fetchWithTimeout(
+      uploadUrl,
+      {
+        method: "POST",
+        body: form
+      },
+      UPLOAD_REQUEST_TIMEOUT_MS,
+      `Upload for ${file.name}`
+    );
+  } catch (error) {
+    const reason = error instanceof Error ? error.message : "Unknown network error";
+    throw new Error(
+      `Photo upload failed before server response. Check storage connectivity/CORS and retry. (${reason})`
+    );
+  }
 
   if (!response.ok) {
     const text = await response.text();
-    throw new Error(`Photo upload failed: ${response.status} ${text}`);
+    throw new Error(
+      `Photo upload failed at storage (HTTP ${response.status}). ${truncate(text || "No response body")}`
+    );
   }
 }
 
