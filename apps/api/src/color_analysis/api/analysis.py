@@ -16,7 +16,7 @@ router = APIRouter(prefix="/v1/sessions/{session_id}", tags=["analysis"])
 
 @router.post("/analyze", response_model=AnalyzeResponse)
 async def analyze(
-    _: AnalyzeRequest,
+    body: AnalyzeRequest,
     session: AnalysisSession = Depends(get_session_or_404),
     db: AsyncSession = Depends(db_session_dep),
 ) -> AnalyzeResponse:
@@ -25,7 +25,14 @@ async def analyze(
     if len(photos) < 6:
         raise ApiError(400, "Insufficient Photos", "At least 6 photos are required", "insufficient_photos")
 
+    if session.status == "running":
+        raise ApiError(409, "Conflict", "Analysis already in progress", "already_running")
+    if session.status == "complete" and not body.force_recompute:
+        raise ApiError(409, "Conflict", "Analysis already complete. Pass force_recompute=true to re-run.", "already_complete")
+
     service = AnalysisService(db)
+    if session.status == "complete":
+        await service.clear_results(session.id)
     return await service.enqueue(session)
 
 
