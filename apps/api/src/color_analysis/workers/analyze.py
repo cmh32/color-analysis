@@ -7,7 +7,7 @@ from PIL import Image, ImageOps
 from sqlalchemy import select
 
 from color_analysis.cv.pipeline import run
-from color_analysis.cv.types import PhotoInput
+from color_analysis.cv.types import PhotoInput, QualityReport
 from color_analysis.db.base import SessionLocal
 from color_analysis.db.models.aggregated_feature import AggregatedFeature
 from color_analysis.db.models.analysis_session import AnalysisSession
@@ -56,19 +56,34 @@ async def _run(session_id: str) -> None:
 
         photo_payloads: dict[uuid.UUID, bytes] = {}
         photo_inputs: list[PhotoInput] = []
+        storage_failure_reports: dict[str, QualityReport] = {}
+        storage_failure_traces: list[str] = []
         for photo in photo_rows:
             try:
                 payload = r2.get_object_bytes(photo.storage_key)
             except Exception:
+                storage_failure_reports[str(photo.id)] = QualityReport(
+                    photo_id=str(photo.id),
+                    accepted=False,
+                    blur_score=0.0,
+                    exposure_score=0.0,
+                    face_count=0,
+                    yaw_degrees=0.0,
+                    pitch_degrees=0.0,
+                    reasons=("decode_failed",),
+                )
+                storage_failure_traces.append(f"{photo.id}:storage_read_failed")
                 continue
             photo_payloads[photo.id] = payload
             photo_inputs.append(PhotoInput(id=str(photo.id), filename=photo.filename, payload=payload))
 
         try:
             result = run(photo_inputs)
+            quality_reports = {**result.quality_reports, **storage_failure_reports}
+            trace = tuple((*result.trace, *storage_failure_traces))
 
             for photo in photo_rows:
-                report = result.quality_reports.get(str(photo.id))
+                report = quality_reports.get(str(photo.id))
                 if report is not None:
                     db.add(
                         PhotoQuality(
@@ -136,7 +151,7 @@ async def _run(session_id: str) -> None:
                 AuditTrace(
                     session_id=parsed,
                     stage="pipeline",
-                    payload={"trace": list(result.trace), "result_state": result.result_state},
+                    payload={"trace": list(trace), "result_state": result.result_state},
                 )
             )
 

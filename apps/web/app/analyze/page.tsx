@@ -14,6 +14,7 @@ type ErrorInfo = {
   detail: string;
   summary?: RejectionSummaryItem[];
   rejectedPhotos?: RejectedPhotoReview[];
+  reviewWarning?: string;
 };
 
 const STATUS_LABELS: Record<SessionStatus, string> = {
@@ -118,8 +119,11 @@ export default function AnalyzePage() {
               const review = await getReview(sessionId);
               if (!active) return;
               retryableError.rejectedPhotos = review.rejected_photos;
-            } catch {
-              // Keep the failure summary visible even if preview fetch fails.
+            } catch (error) {
+              retryableError.reviewWarning =
+                error instanceof Error
+                  ? `We could not load the rejected photo previews. ${error.message}`
+                  : "We could not load the rejected photo previews.";
             }
             setErrorInfo(retryableError);
             return;
@@ -186,6 +190,7 @@ export default function AnalyzePage() {
               ))}
             </ul>
           ) : null}
+          {errorInfo.reviewWarning ? <p className="section-note">{errorInfo.reviewWarning}</p> : null}
           {errorInfo.rejectedPhotos && errorInfo.rejectedPhotos.length > 0 ? (
             <section className="review-grid">
               {errorInfo.rejectedPhotos.map((photo) => (

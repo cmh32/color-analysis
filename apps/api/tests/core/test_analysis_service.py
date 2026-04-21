@@ -151,3 +151,32 @@ async def test_get_review_returns_rejected_photos_with_preview_urls() -> None:
     assert review.rejected_photos[0].preview_url.startswith(
         f"https://example.test/sessions/{session_id}/thumbnails/{photo_id}.jpg"
     )
+
+
+@pytest.mark.asyncio
+async def test_get_review_uses_original_photo_for_decode_failed_preview() -> None:
+    session_id = uuid.uuid4()
+    photo_id = uuid.uuid4()
+    session = AnalysisSession(id=session_id, status="complete", result_state="insufficient_photos")
+    photo = Photo(
+        id=photo_id,
+        session_id=session_id,
+        storage_key="sessions/test/photos/photo.jpg",
+        filename="photo.jpg",
+        mime_type="image/jpeg",
+        size_bytes=123,
+    )
+    quality = _photo_quality(accepted=False, reasons="decode_failed")
+    quality.photo_id = photo_id
+    service = AnalysisService(
+        _FakeDb(session, [], [(photo, quality)]),
+        redis=None,  # type: ignore[arg-type]
+        r2=_FakeR2(),  # type: ignore[arg-type]
+    )
+
+    review = await service.get_review(session)
+
+    assert len(review.rejected_photos) == 1
+    assert review.rejected_photos[0].preview_url.startswith(
+        "https://example.test/sessions/test/photos/photo.jpg"
+    )

@@ -97,7 +97,7 @@ class AnalysisService:
             reasons = [reason.strip() for reason in quality.reasons.split(",") if reason.strip()]
             if not reasons:
                 continue
-            preview_key = f"sessions/{session.id}/thumbnails/{photo.id}.jpg"
+            preview_key = photo.storage_key if "decode_failed" in reasons else f"sessions/{session.id}/thumbnails/{photo.id}.jpg"
             preview_url = self.r2.get_presigned_get_url(preview_key, expires_in_seconds=preview_ttl_seconds)
             rejected_photos.append(
                 RejectedPhotoReview(
