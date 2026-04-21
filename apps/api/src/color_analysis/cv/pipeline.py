@@ -1,3 +1,5 @@
+from collections.abc import Iterable
+
 import numpy as np
 
 from color_analysis.cv.aggregate import aggregate_features
@@ -8,7 +10,7 @@ from color_analysis.cv.landmarks import detect_landmarks
 from color_analysis.cv.quality import evaluate_quality
 from color_analysis.cv.regions import build_region_masks
 from color_analysis.cv.scorecard import build_scorecard
-from color_analysis.cv.types import PipelineResult, PhotoInput
+from color_analysis.cv.types import DecodedPhoto, PipelineResult, PhotoInput, QualityReport
 from color_analysis.cv.white_balance import apply_white_balance
 
 
@@ -36,15 +38,19 @@ def _compute_consistency(features: list) -> float:
     return max(0.0, min(1.0, 1.0 - float(np.mean(stds)) * 2.0))
 
 
-def run(inputs: list[PhotoInput]) -> PipelineResult:
+def run(inputs: Iterable[PhotoInput]) -> PipelineResult:
     trace: list[str] = []
-    decoded = [decode_photo(item) for item in inputs]
-    trace.append("decode")
 
-    quality_reports = {photo.id: evaluate_quality(photo) for photo in decoded}
-    trace.append("quality")
+    quality_reports: dict[str, QualityReport] = {}
+    accepted: list[DecodedPhoto] = []
+    for item in inputs:
+        decoded = decode_photo(item)
+        report = evaluate_quality(decoded)
+        quality_reports[decoded.id] = report
+        if report.accepted:
+            accepted.append(decoded)
+    trace.append("decode+quality")
 
-    accepted = [photo for photo in decoded if quality_reports[photo.id].accepted]
     if len(accepted) < 6:
         dummy_scorecard = build_scorecard({})
         classification = classify(dummy_scorecard)

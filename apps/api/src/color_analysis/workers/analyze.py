@@ -34,16 +34,16 @@ async def _run(session_id: str) -> None:
             await db.scalars(select(Photo).where(Photo.session_id == parsed).order_by(Photo.created_at.asc()))
         )
 
-        inputs: list[PhotoInput] = []
-        for photo in photo_rows:
-            try:
-                payload = r2.get_object_bytes(photo.storage_key)
-            except Exception:
-                continue
-            inputs.append(PhotoInput(id=str(photo.id), filename=photo.filename, payload=payload))
+        def _photo_inputs():
+            for photo in photo_rows:
+                try:
+                    payload = r2.get_object_bytes(photo.storage_key)
+                except Exception:
+                    continue
+                yield PhotoInput(id=str(photo.id), filename=photo.filename, payload=payload)
 
         try:
-            result = run(inputs)
+            result = run(_photo_inputs())
 
             for photo in photo_rows:
                 report = result.quality_reports.get(str(photo.id))
