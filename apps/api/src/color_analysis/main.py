@@ -1,3 +1,6 @@
+from contextlib import asynccontextmanager
+from typing import AsyncGenerator
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -7,8 +10,18 @@ from color_analysis.api.errors import register_error_handlers
 from color_analysis.api.photos import router as photos_router
 from color_analysis.api.sessions import router as sessions_router
 from color_analysis.config import get_settings
+from color_analysis.storage.r2 import R2Client
+from color_analysis.storage.redis import RedisQueue
 
-app = FastAPI(title="Color Analysis API", version="0.1.0")
+
+@asynccontextmanager
+async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
+    app.state.r2 = R2Client()
+    app.state.redis = RedisQueue()
+    yield
+
+
+app = FastAPI(title="Color Analysis API", version="0.1.0", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,

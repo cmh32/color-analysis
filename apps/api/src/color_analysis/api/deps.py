@@ -2,7 +2,7 @@ import hmac
 import uuid
 from collections.abc import AsyncGenerator
 
-from fastapi import Depends, Header
+from fastapi import Depends, Header, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from color_analysis.api.errors import ApiError
@@ -10,11 +10,21 @@ from color_analysis.config import get_settings
 from color_analysis.core.session_service import SessionService
 from color_analysis.db.base import get_db_session
 from color_analysis.db.models.analysis_session import AnalysisSession
+from color_analysis.storage.r2 import R2Client
+from color_analysis.storage.redis import RedisQueue
 
 
 async def db_session_dep() -> AsyncGenerator[AsyncSession, None]:
     async for session in get_db_session():
         yield session
+
+
+def r2_dep(request: Request) -> R2Client:
+    return request.app.state.r2
+
+
+def redis_dep(request: Request) -> RedisQueue:
+    return request.app.state.redis
 
 
 def require_admin_token(x_admin_token: str = Header(default="")) -> None:

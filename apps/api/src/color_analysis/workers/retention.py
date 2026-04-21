@@ -2,11 +2,16 @@ import asyncio
 
 from color_analysis.db.base import SessionLocal
 from color_analysis.core.session_service import SessionService
+from color_analysis.storage.r2 import R2Client
+from color_analysis.storage.redis import RedisQueue
+
+_r2 = R2Client()
+_redis = RedisQueue()
 
 
 async def _sweep() -> int:
     async with SessionLocal() as db:
-        service = SessionService(db)
+        service = SessionService(db, _r2, _redis)
         return await service.sweep_expired_sessions()
 
 

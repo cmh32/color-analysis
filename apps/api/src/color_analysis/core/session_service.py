@@ -14,11 +14,11 @@ from color_analysis.storage.redis import RedisQueue
 
 
 class SessionService:
-    def __init__(self, db: AsyncSession) -> None:
+    def __init__(self, db: AsyncSession, r2: R2Client, redis: RedisQueue) -> None:
         self.db = db
         self.settings = get_settings()
-        self.r2 = R2Client()
-        self.redis = RedisQueue()
+        self.r2 = r2
+        self.redis = redis
 
     async def create_session(self) -> AnalysisSession:
         session = AnalysisSession(

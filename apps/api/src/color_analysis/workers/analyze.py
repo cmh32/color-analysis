@@ -18,10 +18,12 @@ from color_analysis.db.models.photo import Photo
 from color_analysis.db.models.photo_quality import PhotoQuality
 from color_analysis.storage.r2 import R2Client
 
+_r2 = R2Client()
+
 
 async def _run(session_id: str) -> None:
     parsed = uuid.UUID(session_id)
-    r2 = R2Client()
+    r2 = _r2
 
     async with SessionLocal() as db:
         session_obj = await db.get(AnalysisSession, parsed)

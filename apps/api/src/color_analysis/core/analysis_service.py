@@ -15,9 +15,9 @@ from color_analysis.storage.redis import RedisQueue
 
 
 class AnalysisService:
-    def __init__(self, db: AsyncSession) -> None:
+    def __init__(self, db: AsyncSession, redis: RedisQueue) -> None:
         self.db = db
-        self.redis = RedisQueue()
+        self.redis = redis
 
     async def enqueue(self, session: AnalysisSession) -> AnalyzeResponse:
         self.redis.enqueue_analysis(str(session.id))
