@@ -1,4 +1,13 @@
+from typing import Literal
+
 from pydantic import BaseModel, Field
+
+PhotoRejectionReason = Literal[
+    "session_not_pending",
+    "photo_limit_exceeded",
+    "invalid_filename",
+    "unsupported_mime_type",
+]
 
 
 class PhotoRegisterRequest(BaseModel):
@@ -10,6 +19,6 @@ class PhotoRegisterRequest(BaseModel):
 class PhotoRegisterResponse(BaseModel):
     id: str
     accepted: bool
-    reasons: list[str]
+    reasons: list[PhotoRejectionReason]
     upload_url: str | None = None
     upload_fields: dict[str, str] | None = None

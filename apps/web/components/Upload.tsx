@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { createSession, registerPhoto, runAnalysis, uploadPhoto } from "../lib/api";
+import type { PhotoRejectionReason } from "../lib/types";
 
 const WRONG_FILE_TYPE_MESSAGE =
   "Whoops - one or more of your pictures are not the right file type. Please upload JPG, PNG, HEIC, or HEIF files. You're so close to your personalized color profile.";
@@ -13,6 +14,13 @@ const ALLOWED_MIME_TYPES = new Set([
   "image/heic",
   "image/heif"
 ]);
+
+const PHOTO_REJECTION_MESSAGES: Record<PhotoRejectionReason, string> = {
+  session_not_pending: "This session is no longer accepting uploads. Start a new upload and retry.",
+  photo_limit_exceeded: "This upload session reached the 15-photo limit. Choose files again to start a new session.",
+  invalid_filename: "One file name is invalid. Rename that file (remove path-like characters) and retry.",
+  unsupported_mime_type: WRONG_FILE_TYPE_MESSAGE
+};
 
 function hasAllowedExtension(filename: string): boolean {
   const lower = filename.toLowerCase();
@@ -59,21 +67,12 @@ export function Upload({ onSessionReady }: { onSessionReady: (sessionId: string)
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [canRetry, setCanRetry] = useState(false);
 
-  const mapPhotoRegistrationError = (reasons: string[]): string => {
-    const normalizedReasons = reasons.map((reason) => reason.toLowerCase());
-    if (normalizedReasons.some((reason) => reason.includes("mime") || reason.includes("type"))) {
-      return WRONG_FILE_TYPE_MESSAGE;
+  const mapPhotoRegistrationError = (reasons: PhotoRejectionReason[]): string => {
+    if (reasons.length === 0) {
+      return "Photo registration failed. Please retry.";
     }
-    if (normalizedReasons.includes("photo_limit_exceeded")) {
-      return "This upload session reached the 15-photo limit. Choose files again to start a new session.";
-    }
-    if (normalizedReasons.includes("session_not_pending")) {
-      return "This session is no longer accepting uploads. Start a new upload and retry.";
-    }
-    if (normalizedReasons.includes("invalid_filename")) {
-      return "One file name is invalid. Rename that file (remove path-like characters) and retry.";
-    }
-    return `Photo rejected: ${reasons.join(", ")}`;
+    const uniqueReasons = Array.from(new Set(reasons));
+    return uniqueReasons.map((reason) => PHOTO_REJECTION_MESSAGES[reason]).join(" ");
   };
 
   const beginUpload = async (files: File[]) => {

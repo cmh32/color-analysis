@@ -2,10 +2,11 @@ from fastapi import APIRouter, Depends, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from color_analysis.api.deps import db_session_dep, get_session_or_404, r2_dep, redis_dep
+from color_analysis.api.errors import DEFAULT_ERROR_RESPONSES
 from color_analysis.config import get_settings
 from color_analysis.core.session_service import SessionService
 from color_analysis.db.models.analysis_session import AnalysisSession
-from color_analysis.schemas.photo import PhotoRegisterRequest, PhotoRegisterResponse
+from color_analysis.schemas.photo import PhotoRegisterRequest, PhotoRegisterResponse, PhotoRejectionReason
 from color_analysis.storage.r2 import R2Client
 from color_analysis.storage.redis import RedisQueue
 
@@ -22,7 +23,12 @@ def _is_safe_filename(filename: str) -> bool:
     return all(ord(char) >= 32 and ord(char) != 127 for char in filename)
 
 
-@router.post("", response_model=PhotoRegisterResponse, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "",
+    response_model=PhotoRegisterResponse,
+    status_code=status.HTTP_201_CREATED,
+    responses=DEFAULT_ERROR_RESPONSES,
+)
 async def register_photo(
     payload: PhotoRegisterRequest,
     session: AnalysisSession = Depends(get_session_or_404),
@@ -36,7 +42,7 @@ async def register_photo(
     normalized_filename = payload.filename.strip()
     normalized_mime_type = payload.mime_type.strip().lower()
 
-    reasons: list[str] = []
+    reasons: list[PhotoRejectionReason] = []
     accepted = True
 
     if session.status != "pending":
@@ -64,7 +70,8 @@ async def register_photo(
             upload_fields=None,
         )
 
-    photo = await service.add_photo(session, normalized_filename, normalized_mime_type, payload.size_bytes)
+    canonical_mime_type = "image/jpeg" if normalized_mime_type == "image/jpg" else normalized_mime_type
+    photo = await service.add_photo(session, normalized_filename, canonical_mime_type, payload.size_bytes)
     presigned = r2.put_presigned_post(photo.storage_key)
     upload_url = str(presigned.get("url", ""))
     fields_raw = presigned.get("fields", {})

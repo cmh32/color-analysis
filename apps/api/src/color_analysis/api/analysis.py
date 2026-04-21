@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from color_analysis.api.deps import db_session_dep, get_session_or_404, r2_dep, redis_dep
-from color_analysis.api.errors import ApiError
+from color_analysis.api.errors import ApiError, DEFAULT_ERROR_RESPONSES
 from color_analysis.core.analysis_service import AnalysisService
 from color_analysis.core.result_formatter import format_result
 from color_analysis.core.session_service import SessionService
@@ -14,7 +14,7 @@ from color_analysis.storage.redis import RedisQueue
 router = APIRouter(prefix="/v1/sessions/{session_id}", tags=["analysis"])
 
 
-@router.post("/analyze", response_model=AnalyzeResponse)
+@router.post("/analyze", response_model=AnalyzeResponse, responses=DEFAULT_ERROR_RESPONSES)
 async def analyze(
     body: AnalyzeRequest,
     session: AnalysisSession = Depends(get_session_or_404),
@@ -40,7 +40,7 @@ async def analyze(
     return await service.enqueue(session)
 
 
-@router.get("/status", response_model=StatusResponse)
+@router.get("/status", response_model=StatusResponse, responses=DEFAULT_ERROR_RESPONSES)
 async def status(
     session_id: str,
     session: AnalysisSession = Depends(get_session_or_404),
@@ -52,7 +52,7 @@ async def status(
     return await service.get_status(session.id)
 
 
-@router.get("/result", response_model=AnalysisResult)
+@router.get("/result", response_model=AnalysisResult, responses=DEFAULT_ERROR_RESPONSES)
 async def result(
     session_id: str,
     session: AnalysisSession = Depends(get_session_or_404),

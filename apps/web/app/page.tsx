@@ -12,8 +12,7 @@ export default function HomePage() {
   return (
     <main className="page">
       <section className="hero">
-        <span className="eyebrow">Seasonal Color Studio</span>
-        <h1>A professional-grade color profile. For free.</h1>
+        <h1>Find your colors.</h1>
         <p className="lede">
           Share 6 to 15 selfies and receive your seasonal palette.
         </p>

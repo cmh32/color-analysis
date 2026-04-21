@@ -1,4 +1,10 @@
-import type { ClassificationResult } from "./types";
+import type {
+  ApiErrorCode,
+  ClassificationResult,
+  PhotoRejectionReason,
+  ProblemDetail,
+  StatusResponse,
+} from "./types";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
 const API_REQUEST_TIMEOUT_MS = 30_000;
@@ -7,19 +13,27 @@ const UPLOAD_REQUEST_TIMEOUT_MS = 180_000;
 type PhotoRegisterResponse = {
   id: string;
   accepted: boolean;
-  reasons: string[];
+  reasons: PhotoRejectionReason[];
   upload_url?: string | null;
   upload_fields?: Record<string, string> | null;
 };
 
-type ApiProblem = {
-  type?: string;
-  title?: string;
-  status?: number;
-  detail?: string;
-};
-
 const ERROR_TYPE_PREFIX = "https://errors.color-analysis.local/";
+const FALLBACK_API_ERROR_CODE: ApiErrorCode = "internal_error";
+
+const API_ERROR_MESSAGES: Record<ApiErrorCode, string> = {
+  invalid_session: "This session is invalid. Start a new upload and try again.",
+  session_not_found: "This session is no longer available. Start a new upload and try again.",
+  session_deleted: "This session was deleted. Start a new upload and try again.",
+  insufficient_photos: "At least 6 clear photos are required before analysis can start.",
+  already_running: "Analysis is already running for this session. Please wait for it to finish.",
+  already_complete: "This session is already complete. Start a new upload to run again.",
+  result_not_ready: "Your result is still being prepared. Retry in a few moments.",
+  forbidden: "You are not authorized to perform this action.",
+  invalid_request: "The request was invalid. Please refresh and retry.",
+  internal_error: "Server error while processing your request. Please retry.",
+  rate_limit_exceeded: "Too many attempts in a short time. Wait a minute and retry."
+};
 
 function isAbortError(error: unknown): boolean {
   return error instanceof Error && error.name === "AbortError";
@@ -50,38 +64,31 @@ function truncate(text: string, maxLength: number = 180): string {
   return text.length > maxLength ? `${text.slice(0, maxLength)}...` : text;
 }
 
-function extractErrorType(problem: ApiProblem): string | null {
+function extractErrorType(problem: { type?: string }): string | null {
   if (!problem.type?.startsWith(ERROR_TYPE_PREFIX)) {
     return null;
   }
   return problem.type.slice(ERROR_TYPE_PREFIX.length);
 }
 
-function mapProblemToMessage(problem: ApiProblem, statusCode: number): string {
-  const errorType = extractErrorType(problem);
-  if (errorType === "invalid_session" || errorType === "session_not_found" || errorType === "session_deleted") {
-    return "This session is no longer available. Start a new upload and try again.";
+function asApiErrorCode(value: string | null): ApiErrorCode | null {
+  if (!value) return null;
+  if (value in API_ERROR_MESSAGES) {
+    return value as ApiErrorCode;
   }
-  if (errorType === "insufficient_photos") {
-    return "At least 6 clear photos are required before analysis can start.";
-  }
-  if (errorType === "already_running") {
-    return "Analysis is already running for this session. Please wait for it to finish.";
-  }
-  if (errorType === "already_complete") {
-    return "This session is already complete. Start a new upload to run again.";
-  }
-  if (errorType === "rate_limit_exceeded" || statusCode === 429) {
-    return "Too many attempts in a short time. Wait a minute and retry.";
-  }
-  if (errorType === "invalid_request") {
-    return "The request was invalid. Please refresh and retry.";
+  return null;
+}
+
+function mapProblemToMessage(problem: Partial<ProblemDetail>, statusCode: number): string {
+  const structuredCode = typeof problem.error_code === "string" ? asApiErrorCode(problem.error_code) : null;
+  const typeCode = asApiErrorCode(extractErrorType(problem));
+  const errorCode = structuredCode ?? typeCode ?? (statusCode >= 500 ? FALLBACK_API_ERROR_CODE : null);
+
+  if (errorCode) {
+    return API_ERROR_MESSAGES[errorCode];
   }
   if (problem.detail) {
     return truncate(problem.detail);
-  }
-  if (statusCode >= 500) {
-    return "Server error while processing your request. Please retry.";
   }
   return `Request failed with HTTP ${statusCode}.`;
 }
@@ -96,7 +103,7 @@ async function buildApiError(response: Response): Promise<Error> {
 
   if (bodyText) {
     try {
-      const parsed = JSON.parse(bodyText) as ApiProblem;
+      const parsed = JSON.parse(bodyText) as Partial<ProblemDetail>;
       if (parsed && typeof parsed === "object") {
         return new Error(mapProblemToMessage(parsed, response.status));
       }
@@ -198,9 +205,7 @@ export async function runAnalysis(sessionId: string): Promise<{ accepted: boolea
   });
 }
 
-export async function getStatus(
-  sessionId: string
-): Promise<{ status: string; result_state: string | null }> {
+export async function getStatus(sessionId: string): Promise<StatusResponse> {
   return call(`/v1/sessions/${sessionId}/status`);
 }
 

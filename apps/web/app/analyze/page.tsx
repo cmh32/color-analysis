@@ -7,16 +7,24 @@ import { Upload } from "../../components/Upload";
 import { ProgressSpinner } from "../../components/ProgressSpinner";
 import { getStatus } from "../../lib/api";
 import { saveSessionId } from "../../lib/session";
+import type { ResultState, SessionStatus } from "../../lib/types";
 
 type ErrorInfo = { heading: string; detail: string };
 
-const STATUS_LABELS: Record<string, string> = {
+const STATUS_LABELS: Record<SessionStatus, string> = {
   pending: "Queueing your analysis session...",
   running: "Reviewing your color attributes...",
-  complete: "Finalizing your profile..."
+  complete: "Finalizing your profile...",
+  failed: "Analysis failed.",
+  deleted: "Session was deleted."
 };
 
-const RETRYABLE_RESULT_STATES: Record<string, ErrorInfo> = {
+type RetryableResultState = Extract<
+  ResultState,
+  "insufficient_photos" | "no_face_detected" | "multiple_subjects" | "filter_suspected"
+>;
+
+const RETRYABLE_RESULT_STATES: Record<RetryableResultState, ErrorInfo> = {
   insufficient_photos: {
     heading: "Not enough usable photos",
     detail: "At least 6 clear face photos are required. Retry with brighter lighting and direct angles."
@@ -82,7 +90,9 @@ export default function AnalyzePage() {
 
         if (status.status === "complete") {
           const retryableError =
-            status.result_state !== null ? RETRYABLE_RESULT_STATES[status.result_state] : undefined;
+            status.result_state && status.result_state in RETRYABLE_RESULT_STATES
+              ? RETRYABLE_RESULT_STATES[status.result_state as RetryableResultState]
+              : undefined;
           if (retryableError) {
             setErrorInfo(retryableError);
             return;

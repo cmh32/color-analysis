@@ -1,3 +1,4 @@
+from color_analysis.schemas.error import ProblemDetail
 from color_analysis.schemas.analysis import (
     AnalyzeRequest,
     AnalyzeResponse,
@@ -13,6 +14,7 @@ __all__ = [
     "AnalyzeRequest",
     "AnalyzeResponse",
     "AnalysisResult",
+    "ProblemDetail",
     "PhotoRegisterRequest",
     "PhotoRegisterResponse",
     "Reliability",
