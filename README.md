@@ -152,6 +152,18 @@ One-command restart (recommended):
 
 `restart-dev.sh` now starts infra + API + worker + web and writes logs to `${TMPDIR:-/tmp}/color-analysis`.
 
+Stop all dev app processes without restarting:
+
+```bash
+./scripts/kill-dev.sh
+```
+
+Stop app processes and Docker infra services to fully quiet background usage:
+
+```bash
+./scripts/kill-dev.sh --with-infra
+```
+
 Start/restart all three app processes in separate terminals:
 
 1. API (terminal 1):

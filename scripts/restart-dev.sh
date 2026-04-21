@@ -36,46 +36,6 @@ if [[ -n "$LAN_WEB_URL" ]]; then
 fi
 CORS_ALLOWED_ORIGINS_JSON+="]"
 
-kill_listeners_on_port() {
-  local port="$1"
-  local pids
-  pids="$(lsof -ti "tcp:${port}" -sTCP:LISTEN 2>/dev/null || true)"
-  if [[ -z "$pids" ]]; then
-    return 0
-  fi
-
-  echo "Stopping listeners on port ${port}: ${pids}"
-  kill $pids 2>/dev/null || true
-  sleep 1
-
-  local survivors
-  survivors="$(lsof -ti "tcp:${port}" -sTCP:LISTEN 2>/dev/null || true)"
-  if [[ -n "$survivors" ]]; then
-    echo "Force stopping remaining listeners on port ${port}: ${survivors}"
-    kill -9 $survivors 2>/dev/null || true
-  fi
-}
-
-kill_processes_matching() {
-  local pattern="$1"
-  local pids
-  pids="$(pgrep -f "$pattern" 2>/dev/null || true)"
-  if [[ -z "$pids" ]]; then
-    return 0
-  fi
-
-  echo "Stopping processes matching '${pattern}': ${pids}"
-  kill $pids 2>/dev/null || true
-  sleep 1
-
-  local survivors
-  survivors="$(pgrep -f "$pattern" 2>/dev/null || true)"
-  if [[ -n "$survivors" ]]; then
-    echo "Force stopping remaining processes matching '${pattern}': ${survivors}"
-    kill -9 $survivors 2>/dev/null || true
-  fi
-}
-
 wait_for_http() {
   local url="$1"
   local expected="$2"
@@ -120,9 +80,7 @@ wait_for_health_json() {
 
 echo "Restarting local dev stack..."
 
-kill_listeners_on_port 8000
-kill_listeners_on_port 3000
-kill_processes_matching "color_analysis.workers.main"
+"$ROOT_DIR/scripts/kill-dev.sh"
 
 echo "Starting infra services (postgres, redis, minio, minio-init)..."
 (
