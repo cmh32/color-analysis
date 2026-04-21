@@ -56,6 +56,21 @@ export function MeasurementExplanation({ explanation }: { explanation: Explanati
       <div className="measurement-layout">
         {photos.length > 0 ? (
           <div className="measurement-visual">
+            {readings.length > 0 ? (
+              <div className="measurement-region-tabs" aria-label="Measured features">
+                {readings.map((reading) => (
+                  <button
+                    type="button"
+                    key={reading.key}
+                    className={`measurement-region-tab ${selectedGroup === reading.key ? "is-active" : ""}`}
+                    onClick={() => setSelectedGroup(reading.key)}
+                  >
+                    {reading.label}
+                  </button>
+                ))}
+              </div>
+            ) : null}
+
             <div className="measurement-frame">
               <img
                 className="measurement-image"
@@ -70,22 +85,13 @@ export function MeasurementExplanation({ explanation }: { explanation: Explanati
                         <path
                           key={`${overlay.id}-${index}`}
                           d={pathFromPolygon(polygon)}
-                          className={`measurement-shape measurement-${overlay.group}`}
+                          className={`measurement-shape measurement-${overlay.group} ${
+                            selectedGroup === overlay.group ? "is-active" : "is-muted"
+                          }`}
                         />
                       ))
                     )}
                   </svg>
-                  {selectedPhoto.overlays.map((overlay) => (
-                    <button
-                      key={overlay.id}
-                      type="button"
-                      className={`measurement-pin ${selectedGroup === overlay.group ? "is-active" : ""}`}
-                      style={{ left: `${overlay.anchor_x * 100}%`, top: `${overlay.anchor_y * 100}%` }}
-                      onClick={() => setSelectedGroup(overlay.group)}
-                    >
-                      {overlay.label}
-                    </button>
-                  ))}
                 </>
               ) : null}
             </div>
@@ -111,7 +117,7 @@ export function MeasurementExplanation({ explanation }: { explanation: Explanati
           {selectedReading ? (
             <article className="measurement-card">
               <div className="measurement-card-header">
-                <div>
+                <div className="measurement-card-copy">
                   <strong>{selectedReading.label}</strong>
                   <p className="section-note">{selectedReading.summary}</p>
                 </div>
