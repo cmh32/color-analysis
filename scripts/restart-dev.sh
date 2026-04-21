@@ -12,6 +12,30 @@ WORKER_PID_FILE="$LOG_DIR/worker.pid"
 
 mkdir -p "$LOG_DIR"
 
+detect_lan_ip() {
+  local ip
+  ip="$(ipconfig getifaddr en0 2>/dev/null || true)"
+  if [[ -z "$ip" ]]; then
+    ip="$(ipconfig getifaddr en1 2>/dev/null || true)"
+  fi
+  echo "$ip"
+}
+
+LAN_IP="$(detect_lan_ip)"
+LAN_WEB_URL=""
+LAN_API_URL=""
+
+if [[ -n "$LAN_IP" ]]; then
+  LAN_WEB_URL="http://${LAN_IP}:3000"
+  LAN_API_URL="http://${LAN_IP}:8000"
+fi
+
+CORS_ALLOWED_ORIGINS_JSON='["http://localhost:3000","http://127.0.0.1:3000"'
+if [[ -n "$LAN_WEB_URL" ]]; then
+  CORS_ALLOWED_ORIGINS_JSON+=",\"${LAN_WEB_URL}\""
+fi
+CORS_ALLOWED_ORIGINS_JSON+="]"
+
 kill_listeners_on_port() {
   local port="$1"
   local pids
@@ -123,7 +147,7 @@ fi
 echo "Starting API (no --reload) on port 8000..."
 (
   cd "$ROOT_DIR/apps/api"
-  nohup .venv/bin/uvicorn color_analysis.main:app --app-dir src --port 8000 >"$API_LOG" 2>&1 &
+  nohup env COLOR_ANALYSIS_CORS_ALLOWED_ORIGINS="$CORS_ALLOWED_ORIGINS_JSON" .venv/bin/uvicorn color_analysis.main:app --app-dir src --host 0.0.0.0 --port 8000 >"$API_LOG" 2>&1 &
   echo $! >"$API_PID_FILE"
 )
 
@@ -137,7 +161,11 @@ echo "Starting worker..."
 echo "Starting web on port 3000..."
 (
   cd "$ROOT_DIR"
-  nohup corepack pnpm --filter @color-analysis/web dev >"$WEB_LOG" 2>&1 &
+  if [[ -n "$LAN_API_URL" ]]; then
+    nohup env NEXT_PUBLIC_API_BASE_URL="$LAN_API_URL" corepack pnpm --filter @color-analysis/web dev >"$WEB_LOG" 2>&1 &
+  else
+    nohup corepack pnpm --filter @color-analysis/web dev >"$WEB_LOG" 2>&1 &
+  fi
   echo $! >"$WEB_PID_FILE"
 )
 
@@ -151,3 +179,9 @@ echo "Worker log: $WORKER_LOG"
 echo "API pid: $(cat "$API_PID_FILE")"
 echo "Web pid: $(cat "$WEB_PID_FILE")"
 echo "Worker pid: $(cat "$WORKER_PID_FILE")"
+echo "Web URL (local): http://localhost:3000"
+echo "API URL (local): http://127.0.0.1:8000"
+if [[ -n "$LAN_WEB_URL" ]]; then
+  echo "Web URL (LAN): $LAN_WEB_URL"
+  echo "API URL (LAN): $LAN_API_URL"
+fi

@@ -1,6 +1,6 @@
 {
   "top2_stability": 1.0,
-  "score_drift_max": 1.778099930351193,
+  "score_drift_max": 1.1644141003279682,
   "perturbation_pass_rate": 1.0,
   "test_retest_variance": 0.0
 }
