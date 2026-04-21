@@ -1,7 +1,8 @@
 import type { ClassificationResult } from "../lib/types";
 import { AxisDials } from "./AxisDials";
-import { ReliabilityBadge } from "./ReliabilityBadge";
 import { DeleteButton } from "./DeleteButton";
+import { HowWeMeasured } from "./HowWeMeasured";
+import { ReliabilityBadge } from "./ReliabilityBadge";
 
 type SeasonTone = {
   label: string;
@@ -38,6 +39,7 @@ export function ResultScreen({ result }: { result: ClassificationResult }) {
 
       <AxisDials scorecard={result.scorecard} />
       <ReliabilityBadge reliability={result.reliability} />
+      {result.trace.length > 0 ? <HowWeMeasured traces={result.trace} /> : null}
       <DeleteButton sessionId={result.session_id} />
     </>
   );

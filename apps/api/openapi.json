@@ -1054,6 +1054,32 @@
         ],
         "title": "ProblemDetail"
       },
+      "RejectionSummaryItem": {
+        "properties": {
+          "code": {
+            "type": "string",
+            "enum": [
+              "blurry",
+              "bad_exposure",
+              "no_face_detected",
+              "multiple_subjects",
+              "decode_failed"
+            ],
+            "title": "Code"
+          },
+          "count": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Count"
+          }
+        },
+        "type": "object",
+        "required": [
+          "code",
+          "count"
+        ],
+        "title": "RejectionSummaryItem"
+      },
       "Reliability": {
         "properties": {
           "score": {
@@ -1173,6 +1199,20 @@
               }
             ],
             "title": "Result State"
+          },
+          "rejection_summary": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/RejectionSummaryItem"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rejection Summary"
           }
         },
         "type": "object",

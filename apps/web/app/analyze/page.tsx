@@ -7,9 +7,9 @@ import { Upload } from "../../components/Upload";
 import { ProgressSpinner } from "../../components/ProgressSpinner";
 import { getStatus } from "../../lib/api";
 import { saveSessionId } from "../../lib/session";
-import type { ResultState, SessionStatus } from "../../lib/types";
+import type { RejectionSummaryItem, ResultState, SessionStatus } from "../../lib/types";
 
-type ErrorInfo = { heading: string; detail: string };
+type ErrorInfo = { heading: string; detail: string; summary?: RejectionSummaryItem[] };
 
 const STATUS_LABELS: Record<SessionStatus, string> = {
   pending: "Queueing your analysis session...",
@@ -42,6 +42,18 @@ const RETRYABLE_RESULT_STATES: Record<RetryableResultState, ErrorInfo> = {
     detail: "Please retry with unfiltered original photos."
   }
 };
+
+const REJECTION_LABELS: Record<RejectionSummaryItem["code"], string> = {
+  no_face_detected: "no detectable face",
+  multiple_subjects: "multiple faces in frame",
+  blurry: "too blurry",
+  bad_exposure: "poor lighting or exposure",
+  decode_failed: "could not be processed"
+};
+
+function formatRejectionSummary(summary: RejectionSummaryItem[] | null | undefined): RejectionSummaryItem[] | undefined {
+  return summary && summary.length > 0 ? summary : undefined;
+}
 
 export default function AnalyzePage() {
   const router = useRouter();
@@ -91,7 +103,10 @@ export default function AnalyzePage() {
         if (status.status === "complete") {
           const retryableError =
             status.result_state && status.result_state in RETRYABLE_RESULT_STATES
-              ? RETRYABLE_RESULT_STATES[status.result_state as RetryableResultState]
+              ? {
+                  ...RETRYABLE_RESULT_STATES[status.result_state as RetryableResultState],
+                  summary: formatRejectionSummary(status.rejection_summary)
+                }
               : undefined;
           if (retryableError) {
             setErrorInfo(retryableError);
@@ -150,6 +165,15 @@ export default function AnalyzePage() {
         <section className="panel panel-error">
           <h3 className="section-title">{errorInfo.heading}</h3>
           <p className="section-note">{errorInfo.detail}</p>
+          {errorInfo.summary ? (
+            <ul className="reason-list">
+              {errorInfo.summary.map((item) => (
+                <li key={item.code}>
+                  {item.count} photo{item.count === 1 ? "" : "s"} {item.count === 1 ? "was" : "were"} {REJECTION_LABELS[item.code]}
+                </li>
+              ))}
+            </ul>
+          ) : null}
           <div className="actions">
             <button className="button button-primary" onClick={handleRetry}>
               Try Again

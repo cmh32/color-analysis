@@ -3,6 +3,7 @@ from typing import Literal
 from pydantic import BaseModel, Field
 
 Season = Literal["Spring", "Summer", "Autumn", "Winter"]
+QualityIssueCode = Literal["blurry", "bad_exposure", "no_face_detected", "multiple_subjects", "decode_failed"]
 ResultState = Literal[
     "ok",
     "ok_low_reliability",
@@ -22,9 +23,15 @@ class AnalyzeResponse(BaseModel):
     accepted: bool
 
 
+class RejectionSummaryItem(BaseModel):
+    code: QualityIssueCode
+    count: int = Field(ge=1)
+
+
 class StatusResponse(BaseModel):
     status: Literal["pending", "running", "complete", "failed", "deleted"]
     result_state: ResultState | None = None
+    rejection_summary: list[RejectionSummaryItem] | None = None
 
 
 class Scorecard(BaseModel):

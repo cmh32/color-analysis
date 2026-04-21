@@ -216,6 +216,16 @@ export interface components {
              */
             error_code: "invalid_session" | "session_not_found" | "session_deleted" | "insufficient_photos" | "already_running" | "already_complete" | "result_not_ready" | "forbidden" | "invalid_request" | "internal_error" | "rate_limit_exceeded";
         };
+        /** RejectionSummaryItem */
+        RejectionSummaryItem: {
+            /**
+             * Code
+             * @enum {string}
+             */
+            code: "blurry" | "bad_exposure" | "no_face_detected" | "multiple_subjects" | "decode_failed";
+            /** Count */
+            count: number;
+        };
         /** Reliability */
         Reliability: {
             /** Score */
@@ -255,6 +265,8 @@ export interface components {
             status: "pending" | "running" | "complete" | "failed" | "deleted";
             /** Result State */
             result_state?: ("ok" | "ok_low_reliability" | "insufficient_photos" | "no_face_detected" | "multiple_subjects" | "filter_suspected" | "failed") | null;
+            /** Rejection Summary */
+            rejection_summary?: components["schemas"]["RejectionSummaryItem"][] | null;
         };
     };
     responses: never;
