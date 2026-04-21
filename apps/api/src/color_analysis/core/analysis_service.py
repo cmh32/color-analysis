@@ -74,6 +74,12 @@ class AnalysisService:
         query = select(Classification).where(Classification.session_id == session_id)
         return await self.db.scalar(query)
 
+    async def get_aggregated_features(self, session_id: uuid.UUID) -> list[AggregatedFeature]:
+        rows = await self.db.scalars(
+            select(AggregatedFeature).where(AggregatedFeature.session_id == session_id)
+        )
+        return list(rows)
+
     async def get_review(self, session: AnalysisSession) -> SessionReviewResponse:
         if self.r2 is None:
             raise RuntimeError("R2 client is required to build review preview URLs")

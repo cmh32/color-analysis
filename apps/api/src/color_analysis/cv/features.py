@@ -48,6 +48,33 @@ def _rgb_to_lab(rgb: np.ndarray) -> np.ndarray:
     return np.stack([l_star, a_star, b_star], axis=-1)
 
 
+def _lab_to_rgb_hex(l_star: float, a_star: float, b_star: float) -> str:
+    fy = (l_star + 16.0) / 116.0
+    fx = a_star / 500.0 + fy
+    fz = fy - b_star / 200.0
+
+    epsilon = 216 / 24389
+    kappa = 24389 / 27
+
+    def finv(t: float) -> float:
+        return t**3 if t**3 > epsilon else (116 * t - 16) / kappa
+
+    x = finv(fx) * 0.95047
+    y = finv(fy) * 1.00000
+    z = finv(fz) * 1.08883
+
+    r_lin = 3.2406 * x - 1.5372 * y - 0.4986 * z
+    g_lin = -0.9689 * x + 1.8758 * y + 0.0415 * z
+    b_lin = 0.0557 * x - 0.2040 * y + 1.0570 * z
+
+    def compand(c: float) -> int:
+        c = max(0.0, min(1.0, c))
+        c = 1.055 * c ** (1 / 2.4) - 0.055 if c > 0.0031308 else 12.92 * c
+        return round(c * 255)
+
+    return f"#{compand(r_lin):02x}{compand(g_lin):02x}{compand(b_lin):02x}"
+
+
 def _clean_region_pixels(region: str, pixels: np.ndarray) -> np.ndarray:
     if pixels.shape[0] < 8:
         return pixels

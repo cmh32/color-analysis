@@ -997,6 +997,20 @@
             },
             "type": "array",
             "title": "Trace"
+          },
+          "color_swatches": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "type": "string"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Color Swatches"
           }
         },
         "type": "object",

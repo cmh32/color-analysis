@@ -71,7 +71,8 @@ async def result(
     if classification is None:
         raise ApiError(404, "Not Found", "Result not ready", "result_not_ready")
 
-    return format_result(classification)
+    aggregated_features = await service.get_aggregated_features(session.id)
+    return format_result(classification, aggregated_features)
 
 
 @router.get("/review", response_model=SessionReviewResponse, responses=DEFAULT_ERROR_RESPONSES)

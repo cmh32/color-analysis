@@ -179,6 +179,10 @@ export interface components {
             result_state: "ok" | "ok_low_reliability" | "insufficient_photos" | "no_face_detected" | "multiple_subjects" | "filter_suspected" | "failed";
             /** Trace */
             trace: string[];
+            /** Color Swatches */
+            color_swatches?: {
+                [key: string]: string;
+            } | null;
         };
         /** AnalyzeRequest */
         AnalyzeRequest: {

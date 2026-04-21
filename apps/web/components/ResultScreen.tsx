@@ -1,5 +1,6 @@
 import type { ClassificationResult } from "../lib/types";
 import { AxisDials } from "./AxisDials";
+import { ColorSwatches } from "./ColorSwatches";
 import { DeleteButton } from "./DeleteButton";
 import { HowWeMeasured } from "./HowWeMeasured";
 import { ReliabilityBadge } from "./ReliabilityBadge";
@@ -38,6 +39,7 @@ export function ResultScreen({ result }: { result: ClassificationResult }) {
       </section>
 
       <AxisDials scorecard={result.scorecard} />
+      <ColorSwatches swatches={result.color_swatches ?? null} />
       <ReliabilityBadge reliability={result.reliability} />
       {result.trace.length > 0 ? <HowWeMeasured traces={result.trace} /> : null}
       <DeleteButton sessionId={result.session_id} />

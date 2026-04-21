@@ -65,3 +65,4 @@ class AnalysisResult(BaseModel):
     reliability: Reliability
     result_state: ResultState
     trace: list[str]
+    color_swatches: dict[str, str] | None = None
