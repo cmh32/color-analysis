@@ -170,6 +170,50 @@ curl -sS http://127.0.0.1:8000/health
 
 Open `http://localhost:3000` for the web UI.
 
+## Troubleshooting: Known Startup Failures
+
+1. API fails immediately with `ERROR: [Errno 1] Operation not permitted`:
+
+This usually comes from `uvicorn --reload` in restricted environments where file watching is blocked.
+
+Start API without reload:
+
+```bash
+cd apps/api
+uvicorn color_analysis.main:app --app-dir src --port 8000
+```
+
+2. API startup fails with `EndpointConnectionError: Could not connect to the endpoint URL: "http://localhost:9000/color-analysis"`:
+
+This means local infra (especially MinIO) is not reachable or not initialized.
+
+Start infra services explicitly:
+
+```bash
+cd infra/docker
+docker compose up -d postgres redis minio minio-init
+```
+
+3. `docker compose up -d` fails while building API/worker images with `error in 'egg_base' option: 'src' does not exist or is not a directory`:
+
+For local app development, you do not need to build/run API or worker containers. Start infra-only services:
+
+```bash
+cd infra/docker
+docker compose up -d postgres redis minio minio-init
+```
+
+Then run API/web locally from `apps/api` and `apps/web`.
+
+4. Web fails with `Error: listen EPERM: operation not permitted 0.0.0.0:3000`:
+
+This is typically an environment/sandbox permission issue around binding local ports.
+Run the frontend from a normal local terminal session (outside restricted sandbox tooling) and retry:
+
+```bash
+corepack pnpm --filter @color-analysis/web dev
+```
+
 ## Useful Commands
 
 - Export OpenAPI:
