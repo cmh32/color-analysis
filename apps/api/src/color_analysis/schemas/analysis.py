@@ -28,6 +28,17 @@ class RejectionSummaryItem(BaseModel):
     count: int = Field(ge=1)
 
 
+class RejectedPhotoReview(BaseModel):
+    photo_id: str
+    filename: str
+    reasons: list[QualityIssueCode]
+    preview_url: str
+
+
+class SessionReviewResponse(BaseModel):
+    rejected_photos: list[RejectedPhotoReview]
+
+
 class StatusResponse(BaseModel):
     status: Literal["pending", "running", "complete", "failed", "deleted"]
     result_state: ResultState | None = None

@@ -7,7 +7,13 @@ from color_analysis.core.analysis_service import AnalysisService
 from color_analysis.core.result_formatter import format_result
 from color_analysis.core.session_service import SessionService
 from color_analysis.db.models.analysis_session import AnalysisSession
-from color_analysis.schemas.analysis import AnalyzeRequest, AnalyzeResponse, AnalysisResult, StatusResponse
+from color_analysis.schemas.analysis import (
+    AnalyzeRequest,
+    AnalyzeResponse,
+    AnalysisResult,
+    SessionReviewResponse,
+    StatusResponse,
+)
 from color_analysis.storage.r2 import R2Client
 from color_analysis.storage.redis import RedisQueue
 
@@ -66,3 +72,19 @@ async def result(
         raise ApiError(404, "Not Found", "Result not ready", "result_not_ready")
 
     return format_result(classification)
+
+
+@router.get("/review", response_model=SessionReviewResponse, responses=DEFAULT_ERROR_RESPONSES)
+async def review(
+    session_id: str,
+    session: AnalysisSession = Depends(get_session_or_404),
+    db: AsyncSession = Depends(db_session_dep),
+    r2: R2Client = Depends(r2_dep),
+    redis: RedisQueue = Depends(redis_dep),
+) -> SessionReviewResponse:
+    del session_id
+    if session.status != "complete":
+        raise ApiError(404, "Not Found", "Review is not ready", "result_not_ready")
+
+    service = AnalysisService(db, redis, r2)
+    return await service.get_review(session)

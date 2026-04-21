@@ -5,13 +5,20 @@ import pytest
 
 from color_analysis.core.analysis_service import AnalysisService, _build_rejection_summary
 from color_analysis.db.models.analysis_session import AnalysisSession
+from color_analysis.db.models.photo import Photo
 from color_analysis.db.models.photo_quality import PhotoQuality
 
 
 class _FakeDb:
-    def __init__(self, session_obj: AnalysisSession | None, photo_quality_rows: list[PhotoQuality]) -> None:
+    def __init__(
+        self,
+        session_obj: AnalysisSession | None,
+        photo_quality_rows: list[PhotoQuality],
+        review_rows: list[tuple[Photo, PhotoQuality]] | None = None,
+    ) -> None:
         self.session_obj = session_obj
         self.photo_quality_rows = photo_quality_rows
+        self.review_rows = review_rows or []
 
     async def scalar(self, query: object) -> AnalysisSession | None:
         del query
@@ -20,6 +27,23 @@ class _FakeDb:
     async def scalars(self, query: object) -> Iterable[PhotoQuality]:
         del query
         return self.photo_quality_rows
+
+    async def execute(self, query: object):
+        del query
+
+        class _Result:
+            def __init__(self, rows: list[tuple[Photo, PhotoQuality]]) -> None:
+                self._rows = rows
+
+            def all(self) -> list[tuple[Photo, PhotoQuality]]:
+                return self._rows
+
+        return _Result(self.review_rows)
+
+
+class _FakeR2:
+    def get_presigned_get_url(self, key: str, expires_in_seconds: int = 3600) -> str:
+        return f"https://example.test/{key}?expires={expires_in_seconds}"
 
 
 def _photo_quality(*, accepted: bool, reasons: str, face_count: int = 1) -> PhotoQuality:
@@ -95,3 +119,35 @@ async def test_get_status_omits_rejection_summary_for_non_retryable_state() -> N
     assert status.status == "complete"
     assert status.result_state == "ok"
     assert status.rejection_summary is None
+
+
+@pytest.mark.asyncio
+async def test_get_review_returns_rejected_photos_with_preview_urls() -> None:
+    session_id = uuid.uuid4()
+    photo_id = uuid.uuid4()
+    session = AnalysisSession(id=session_id, status="complete", result_state="insufficient_photos")
+    photo = Photo(
+        id=photo_id,
+        session_id=session_id,
+        storage_key="sessions/test/photos/photo.jpg",
+        filename="photo.jpg",
+        mime_type="image/jpeg",
+        size_bytes=123,
+    )
+    quality = _photo_quality(accepted=False, reasons="blurry, bad_exposure")
+    quality.photo_id = photo_id
+    service = AnalysisService(
+        _FakeDb(session, [], [(photo, quality)]),
+        redis=None,  # type: ignore[arg-type]
+        r2=_FakeR2(),  # type: ignore[arg-type]
+    )
+
+    review = await service.get_review(session)
+
+    assert len(review.rejected_photos) == 1
+    assert review.rejected_photos[0].photo_id == str(photo_id)
+    assert review.rejected_photos[0].filename == "photo.jpg"
+    assert review.rejected_photos[0].reasons == ["blurry", "bad_exposure"]
+    assert review.rejected_photos[0].preview_url.startswith(
+        f"https://example.test/sessions/{session_id}/thumbnails/{photo_id}.jpg"
+    )

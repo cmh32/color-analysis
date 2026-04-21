@@ -106,6 +106,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/sessions/{session_id}/review": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Review */
+        get: operations["review_v1_sessions__session_id__review_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/admin/sessions/{session_id}/trace": {
         parameters: {
             query?: never;
@@ -216,6 +233,17 @@ export interface components {
              */
             error_code: "invalid_session" | "session_not_found" | "session_deleted" | "insufficient_photos" | "already_running" | "already_complete" | "result_not_ready" | "forbidden" | "invalid_request" | "internal_error" | "rate_limit_exceeded";
         };
+        /** RejectedPhotoReview */
+        RejectedPhotoReview: {
+            /** Photo Id */
+            photo_id: string;
+            /** Filename */
+            filename: string;
+            /** Reasons */
+            reasons: ("blurry" | "bad_exposure" | "no_face_detected" | "multiple_subjects" | "decode_failed")[];
+            /** Preview Url */
+            preview_url: string;
+        };
         /** RejectionSummaryItem */
         RejectionSummaryItem: {
             /**
@@ -255,6 +283,11 @@ export interface components {
             id: string;
             /** Status */
             status: string;
+        };
+        /** SessionReviewResponse */
+        SessionReviewResponse: {
+            /** Rejected Photos */
+            rejected_photos: components["schemas"]["RejectedPhotoReview"][];
         };
         /** StatusResponse */
         StatusResponse: {
@@ -769,6 +802,100 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AnalysisResult"];
+                };
+            };
+            /** @description Error response with stable error_code for client handling. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Error response with stable error_code for client handling. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Error response with stable error_code for client handling. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Error response with stable error_code for client handling. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Error response with stable error_code for client handling. */
+            410: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Error response with stable error_code for client handling. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Error response with stable error_code for client handling. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Error response with stable error_code for client handling. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetail"];
+                };
+            };
+        };
+    };
+    review_v1_sessions__session_id__review_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                session_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SessionReviewResponse"];
                 };
             };
             /** @description Error response with stable error_code for client handling. */

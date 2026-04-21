@@ -12,7 +12,7 @@ if (!existsSync(source)) {
 }
 
 try {
-  execSync(`openapi-typescript ${source} -o ${target}`, { stdio: "inherit" });
+  execSync(`./node_modules/.bin/openapi-typescript ${source} -o ${target}`, { stdio: "inherit" });
 } catch {
   const fallback = "./index.fallback.d.ts";
   copyFileSync(fallback, target);

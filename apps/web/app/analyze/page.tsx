@@ -5,11 +5,16 @@ import { useRouter } from "next/navigation";
 import { GuidanceChecklist } from "../../components/GuidanceChecklist";
 import { Upload } from "../../components/Upload";
 import { ProgressSpinner } from "../../components/ProgressSpinner";
-import { getStatus } from "../../lib/api";
+import { getReview, getStatus } from "../../lib/api";
 import { saveSessionId } from "../../lib/session";
-import type { RejectionSummaryItem, ResultState, SessionStatus } from "../../lib/types";
+import type { RejectedPhotoReview, RejectionSummaryItem, ResultState, SessionStatus } from "../../lib/types";
 
-type ErrorInfo = { heading: string; detail: string; summary?: RejectionSummaryItem[] };
+type ErrorInfo = {
+  heading: string;
+  detail: string;
+  summary?: RejectionSummaryItem[];
+  rejectedPhotos?: RejectedPhotoReview[];
+};
 
 const STATUS_LABELS: Record<SessionStatus, string> = {
   pending: "Queueing your analysis session...",
@@ -109,6 +114,13 @@ export default function AnalyzePage() {
                 }
               : undefined;
           if (retryableError) {
+            try {
+              const review = await getReview(sessionId);
+              if (!active) return;
+              retryableError.rejectedPhotos = review.rejected_photos;
+            } catch {
+              // Keep the failure summary visible even if preview fetch fails.
+            }
             setErrorInfo(retryableError);
             return;
           }
@@ -173,6 +185,23 @@ export default function AnalyzePage() {
                 </li>
               ))}
             </ul>
+          ) : null}
+          {errorInfo.rejectedPhotos && errorInfo.rejectedPhotos.length > 0 ? (
+            <section className="review-grid">
+              {errorInfo.rejectedPhotos.map((photo) => (
+                <article className="review-card" key={photo.photo_id}>
+                  <img className="review-preview" src={photo.preview_url} alt={photo.filename} />
+                  <div className="review-meta">
+                    <strong>{photo.filename}</strong>
+                    <ul className="review-reasons">
+                      {photo.reasons.map((reason) => (
+                        <li key={`${photo.photo_id}-${reason}`}>{REJECTION_LABELS[reason]}</li>
+                      ))}
+                    </ul>
+                  </div>
+                </article>
+              ))}
+            </section>
           ) : null}
           <div className="actions">
             <button className="button button-primary" onClick={handleRetry}>

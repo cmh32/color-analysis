@@ -679,6 +679,118 @@
         }
       }
     },
+    "/v1/sessions/{session_id}/review": {
+      "get": {
+        "tags": [
+          "analysis"
+        ],
+        "summary": "Review",
+        "operationId": "review_v1_sessions__session_id__review_get",
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Session Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionReviewResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Error response with stable error_code for client handling.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Error response with stable error_code for client handling.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Error response with stable error_code for client handling.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Error response with stable error_code for client handling.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "410": {
+            "description": "Error response with stable error_code for client handling.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Error response with stable error_code for client handling.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Error response with stable error_code for client handling.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Error response with stable error_code for client handling.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/admin/sessions/{session_id}/trace": {
       "get": {
         "tags": [
@@ -1054,6 +1166,44 @@
         ],
         "title": "ProblemDetail"
       },
+      "RejectedPhotoReview": {
+        "properties": {
+          "photo_id": {
+            "type": "string",
+            "title": "Photo Id"
+          },
+          "filename": {
+            "type": "string",
+            "title": "Filename"
+          },
+          "reasons": {
+            "items": {
+              "type": "string",
+              "enum": [
+                "blurry",
+                "bad_exposure",
+                "no_face_detected",
+                "multiple_subjects",
+                "decode_failed"
+              ]
+            },
+            "type": "array",
+            "title": "Reasons"
+          },
+          "preview_url": {
+            "type": "string",
+            "title": "Preview Url"
+          }
+        },
+        "type": "object",
+        "required": [
+          "photo_id",
+          "filename",
+          "reasons",
+          "preview_url"
+        ],
+        "title": "RejectedPhotoReview"
+      },
       "RejectionSummaryItem": {
         "properties": {
           "code": {
@@ -1166,6 +1316,22 @@
           "status"
         ],
         "title": "SessionCreateResponse"
+      },
+      "SessionReviewResponse": {
+        "properties": {
+          "rejected_photos": {
+            "items": {
+              "$ref": "#/components/schemas/RejectedPhotoReview"
+            },
+            "type": "array",
+            "title": "Rejected Photos"
+          }
+        },
+        "type": "object",
+        "required": [
+          "rejected_photos"
+        ],
+        "title": "SessionReviewResponse"
       },
       "StatusResponse": {
         "properties": {

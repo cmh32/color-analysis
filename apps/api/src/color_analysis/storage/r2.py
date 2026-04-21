@@ -40,6 +40,15 @@ class R2Client:
             Conditions=[["content-length-range", 1, self.MAX_UPLOAD_BYTES]],
         )
 
+    def get_presigned_get_url(self, key: str, expires_in_seconds: int = 3600) -> str:
+        return str(
+            self.client.generate_presigned_url(
+                "get_object",
+                Params={"Bucket": self.bucket, "Key": key},
+                ExpiresIn=expires_in_seconds,
+            )
+        )
+
     def get_object_bytes(self, key: str) -> bytes:
         response = self.client.get_object(Bucket=self.bucket, Key=key)
         body = response["Body"].read()

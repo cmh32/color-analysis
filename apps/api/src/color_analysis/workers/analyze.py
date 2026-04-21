@@ -3,7 +3,7 @@ import io
 import uuid
 from collections import defaultdict
 
-from PIL import Image
+from PIL import Image, ImageOps
 from sqlalchemy import select
 
 from color_analysis.cv.pipeline import run
@@ -19,6 +19,21 @@ from color_analysis.db.models.photo_quality import PhotoQuality
 from color_analysis.storage.r2 import R2Client
 
 _r2 = R2Client()
+
+
+def _build_thumbnail(payload: bytes, size: tuple[int, int] = (256, 256)) -> bytes:
+    image = Image.open(io.BytesIO(payload))
+    image = ImageOps.exif_transpose(image).convert("RGB")
+    image.thumbnail(size, Image.Resampling.LANCZOS)
+
+    thumb = Image.new("RGB", size, color=(250, 245, 240))
+    x = (size[0] - image.width) // 2
+    y = (size[1] - image.height) // 2
+    thumb.paste(image, (x, y))
+
+    buff = io.BytesIO()
+    thumb.save(buff, format="JPEG", quality=88)
+    return buff.getvalue()
 
 
 async def _run(session_id: str) -> None:
@@ -39,16 +54,18 @@ async def _run(session_id: str) -> None:
             await db.scalars(select(Photo).where(Photo.session_id == parsed).order_by(Photo.created_at.asc()))
         )
 
-        def _photo_inputs():
-            for photo in photo_rows:
-                try:
-                    payload = r2.get_object_bytes(photo.storage_key)
-                except Exception:
-                    continue
-                yield PhotoInput(id=str(photo.id), filename=photo.filename, payload=payload)
+        photo_payloads: dict[uuid.UUID, bytes] = {}
+        photo_inputs: list[PhotoInput] = []
+        for photo in photo_rows:
+            try:
+                payload = r2.get_object_bytes(photo.storage_key)
+            except Exception:
+                continue
+            photo_payloads[photo.id] = payload
+            photo_inputs.append(PhotoInput(id=str(photo.id), filename=photo.filename, payload=payload))
 
         try:
-            result = run(_photo_inputs())
+            result = run(photo_inputs)
 
             for photo in photo_rows:
                 report = result.quality_reports.get(str(photo.id))
@@ -125,12 +142,12 @@ async def _run(session_id: str) -> None:
 
             thumb_prefix = f"sessions/{session_id}/thumbnails"
             for photo in photo_rows:
-                image = Image.new("RGB", (256, 256), color=(20, 120, 100))
-                buff = io.BytesIO()
-                image.save(buff, format="JPEG")
+                payload = photo_payloads.get(photo.id)
+                if payload is None:
+                    continue
                 r2.put_object_bytes(
                     key=f"{thumb_prefix}/{photo.id}.jpg",
-                    payload=buff.getvalue(),
+                    payload=_build_thumbnail(payload),
                     content_type="image/jpeg",
                 )
 

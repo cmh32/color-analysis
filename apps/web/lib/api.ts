@@ -3,6 +3,7 @@ import type {
   ClassificationResult,
   PhotoRejectionReason,
   ProblemDetail,
+  SessionReviewResponse,
   StatusResponse,
 } from "./types";
 
@@ -211,6 +212,10 @@ export async function getStatus(sessionId: string): Promise<StatusResponse> {
 
 export async function getResult(sessionId: string): Promise<ClassificationResult> {
   return call(`/v1/sessions/${sessionId}/result`);
+}
+
+export async function getReview(sessionId: string): Promise<SessionReviewResponse> {
+  return call(`/v1/sessions/${sessionId}/review`);
 }
 
 export async function deleteSession(sessionId: string): Promise<void> {

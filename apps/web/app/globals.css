@@ -559,6 +559,46 @@ summary:focus-visible {
   color: #5f5565;
 }
 
+.review-grid {
+  margin-top: 1rem;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 0.8rem;
+}
+
+.review-card {
+  background: rgba(255, 255, 255, 0.94);
+  border: 1px solid #ead7df;
+  border-radius: 1rem;
+  overflow: hidden;
+}
+
+.review-preview {
+  display: block;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  object-fit: cover;
+  background: #f6eee8;
+}
+
+.review-meta {
+  padding: 0.8rem;
+  display: grid;
+  gap: 0.45rem;
+}
+
+.review-meta strong {
+  color: #443b49;
+  word-break: break-word;
+}
+
+.review-reasons {
+  margin: 0;
+  padding-left: 1rem;
+  color: #6a5f70;
+  font-size: 0.92rem;
+}
+
 .details-panel summary {
   cursor: pointer;
   list-style: none;

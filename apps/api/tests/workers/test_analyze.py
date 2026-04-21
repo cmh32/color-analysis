@@ -1,16 +1,18 @@
 import os
 import uuid
+from io import BytesIO
 from collections.abc import Iterable
 from contextlib import asynccontextmanager
 
 import pytest
+from PIL import Image
 
 from color_analysis.cv.types import Classification as CvClassification
 from color_analysis.cv.types import PipelineResult, QualityReport, Reliability, Scorecard
 from color_analysis.db.models.analysis_session import AnalysisSession
 from color_analysis.db.models.photo import Photo
 from color_analysis.db.models.photo_quality import PhotoQuality
-from color_analysis.workers.analyze import _run, run_analysis
+from color_analysis.workers.analyze import _build_thumbnail, _run, run_analysis
 
 
 class _FakeR2:
@@ -18,7 +20,11 @@ class _FakeR2:
         self.thumbnail_keys: list[str] = []
 
     def get_object_bytes(self, key: str) -> bytes:
-        return b"fake-image-bytes"
+        del key
+        image = Image.new("RGB", (640, 480), color=(120, 160, 200))
+        buff = BytesIO()
+        image.save(buff, format="JPEG")
+        return buff.getvalue()
 
     def put_object_bytes(self, key: str, payload: bytes, content_type: str = "application/octet-stream") -> None:
         del payload, content_type
@@ -118,6 +124,18 @@ async def test_worker_persists_face_count(monkeypatch) -> None:
     assert session_obj.status == "complete"
     assert session_obj.result_state == "multiple_subjects"
     assert fake_r2.thumbnail_keys == [f"sessions/{session_id}/thumbnails/{photo_id}.jpg"]
+
+
+def test_build_thumbnail_returns_real_jpeg_bytes() -> None:
+    source = Image.new("RGB", (400, 300), color=(50, 100, 150))
+    buff = BytesIO()
+    source.save(buff, format="JPEG")
+
+    thumbnail = _build_thumbnail(buff.getvalue())
+    rendered = Image.open(BytesIO(thumbnail))
+
+    assert rendered.format == "JPEG"
+    assert rendered.size == (256, 256)
 
 
 @pytest.mark.skipif(os.getenv("COLOR_ANALYSIS_RUN_WORKER_TESTS") != "1", reason="requires db and storage")
