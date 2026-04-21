@@ -16,7 +16,10 @@ def _rect(mask: np.ndarray, x0: int, y0: int, x1: int, y1: int) -> np.ndarray:
     return mask
 
 
-def build_region_masks(rgb_shape: tuple[int, int, int], landmarks: Landmarks) -> RegionMasks:
+def build_region_masks(rgb_shape: tuple[int, int, int], landmarks: Landmarks | None) -> RegionMasks:
+    if landmarks is None:
+        raise ValueError("landmarks are required to build region masks")
+
     height, width, _ = rgb_shape
     x0, y0, x1, y1 = landmarks.face_bbox
 

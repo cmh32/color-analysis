@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { createSession, registerPhoto, runAnalysis, uploadPhoto } from "../lib/api";
+import { createSession, deleteSession, registerPhoto, runAnalysis, uploadPhoto } from "../lib/api";
 import type { PhotoRejectionReason } from "../lib/types";
 
 const WRONG_FILE_TYPE_MESSAGE =
@@ -103,9 +103,11 @@ export function Upload({ onSessionReady }: { onSessionReady: (sessionId: string)
     setBusy(true);
     setStatusMessage("Creating analysis session...");
     setError(null);
+    let sessionId: string | null = null;
 
     try {
       const session = await createSession();
+      sessionId = session.id;
       const total = files.length;
       const uploads: Array<{
         file: File;
@@ -117,7 +119,7 @@ export function Upload({ onSessionReady }: { onSessionReady: (sessionId: string)
         const file = files[index];
         setStatusMessage(`Registering photos (${index + 1}/${total})...`);
         const registration = await registerPhoto(
-          session.id,
+          sessionId,
           file.name,
           inferMimeType(file),
           file.size
@@ -143,9 +145,16 @@ export function Upload({ onSessionReady }: { onSessionReady: (sessionId: string)
       }
 
       setStatusMessage("Starting analysis...");
-      await runAnalysis(session.id);
-      onSessionReady(session.id);
+      await runAnalysis(sessionId);
+      onSessionReady(sessionId);
     } catch (err) {
+      if (sessionId) {
+        try {
+          await deleteSession(sessionId);
+        } catch {
+          // Keep the original upload error visible; cleanup is best-effort only.
+        }
+      }
       setError(err instanceof Error ? err.message : "Upload failed");
       setCanRetry(true);
     } finally {

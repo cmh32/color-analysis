@@ -72,7 +72,14 @@ async def register_photo(
 
     canonical_mime_type = "image/jpeg" if normalized_mime_type == "image/jpg" else normalized_mime_type
     photo = await service.add_photo(session, normalized_filename, canonical_mime_type, payload.size_bytes)
-    presigned = r2.put_presigned_post(photo.storage_key)
+    try:
+        presigned = r2.put_presigned_post(photo.storage_key)
+        await db.commit()
+    except Exception:
+        await db.rollback()
+        raise
+
+    await db.refresh(photo)
     upload_url = str(presigned.get("url", ""))
     fields_raw = presigned.get("fields", {})
     upload_fields = {str(key): str(value) for key, value in fields_raw.items() if isinstance(key, str)}

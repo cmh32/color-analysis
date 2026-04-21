@@ -52,8 +52,7 @@ class SessionService:
             size_bytes=size_bytes,
         )
         self.db.add(photo)
-        await self.db.commit()
-        await self.db.refresh(photo)
+        await self.db.flush()
         return photo
 
     async def list_photos(self, session_id: uuid.UUID) -> list[Photo]:
