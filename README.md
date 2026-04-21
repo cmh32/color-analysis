@@ -24,7 +24,7 @@ docker compose up -d
 
 ```bash
 cd apps/api
-python -m pip install -e .[dev]
+python -m pip install -e '.[dev]'
 uvicorn color_analysis.main:app --app-dir src --reload --port 8000
 ```
 
@@ -139,6 +139,36 @@ cd ../..
 corepack pnpm install
 corepack pnpm --filter @color-analysis/web dev
 ```
+
+## Troubleshooting: Can't Connect to Server
+
+If the browser shows a connection error, one of the local dev servers is usually not running.
+
+Start/restart both servers in separate terminals:
+
+1. API (terminal 1):
+
+```bash
+cd apps/api
+python -m pip install -e '.[dev]'  # first-time setup only
+uvicorn color_analysis.main:app --app-dir src --reload --port 8000
+```
+
+2. Web (terminal 2):
+
+```bash
+corepack pnpm install  # first-time setup only
+corepack pnpm --filter @color-analysis/web dev
+```
+
+Quick checks:
+
+```bash
+curl -sS http://127.0.0.1:8000/health
+# expected: {"status":"ok"}
+```
+
+Open `http://localhost:3000` for the web UI.
 
 ## Useful Commands
 

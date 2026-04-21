@@ -13,10 +13,9 @@ export default function HomePage() {
     <main className="page">
       <section className="hero">
         <span className="eyebrow">Seasonal Color Studio</span>
-        <h1>Your color profile, styled like a beauty editorial.</h1>
+        <h1>A professional-grade color profile. For free.</h1>
         <p className="lede">
-          Share 6 to 15 natural selfies and receive your top seasonal palette with an
-          easy-to-read confidence summary and transparent measurement details.
+          Share 6 to 15 selfies and receive your seasonal palette.
         </p>
         <div className="actions">
           <Link href="/analyze" className="button button-primary">
@@ -25,21 +24,6 @@ export default function HomePage() {
           <a href="#prep" className="button button-secondary">
             View Prep Guide
           </a>
-        </div>
-      </section>
-
-      <section className="panel panel-soft">
-        <h3 className="section-title">Collectible-style swatch preview</h3>
-        <p className="section-note">
-          Your final report highlights seasonal tendencies with soft, tactile swatch cards.
-        </p>
-        <div className="swatch-grid" style={{ marginTop: "0.8rem" }}>
-          {previewSwatches.map((swatch) => (
-            <article className="swatch-card" key={swatch.name}>
-              <div className={`swatch-chip ${swatch.toneClass}`} />
-              <strong>{swatch.name}</strong>
-            </article>
-          ))}
         </div>
       </section>
 

@@ -23,6 +23,7 @@ export function ResultScreen({ result }: { result: ClassificationResult }) {
     <>
       <section className="panel result-hero">
         <h2>{topSeason}</h2>
+        <p className="section-note">Primary alignment: {topSeason}</p>
         <p className="section-note">Secondary alignment: {altSeason}</p>
         <div className="result-season">
           {[topSeason, altSeason].map((season) => (
