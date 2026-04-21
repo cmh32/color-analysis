@@ -21,9 +21,6 @@ export default function HomePage() {
           <Link href="/analyze" className="button button-primary">
             Start Analysis
           </Link>
-          <a href="#prep" className="button button-secondary">
-            View Prep Guide
-          </a>
         </div>
       </section>
 
