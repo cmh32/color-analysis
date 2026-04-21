@@ -39,6 +39,10 @@ class Landmarks:
     face_bbox: tuple[int, int, int, int]
     left_eye_center: tuple[int, int]
     right_eye_center: tuple[int, int]
+    mesh_points: tuple[tuple[int, int], ...] = ()
+    pose_yaw_degrees: float = 0.0
+    pose_pitch_degrees: float = 0.0
+    pose_roll_degrees: float = 0.0
 
 
 @dataclass(frozen=True)

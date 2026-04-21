@@ -45,7 +45,7 @@ def _empty_result(
 ) -> PipelineResult:
     dummy_scorecard = build_scorecard({})
     classification = classify(dummy_scorecard)
-    reliability = compute_reliability(0.0, 0.0, 0.0)
+    reliability = compute_reliability(0.0, 0.0, 0.0, photo_count=0)
     return PipelineResult(
         result_state=result_state,
         scorecard=dummy_scorecard,
@@ -146,7 +146,12 @@ def run(inputs: Iterable[PhotoInput]) -> PipelineResult:
         )
     )
     consistency_score = _compute_consistency(all_features)
-    reliability = compute_reliability(quality_mean, consistency_score, classification.margin)
+    reliability = compute_reliability(
+        quality_mean,
+        consistency_score,
+        classification.margin,
+        photo_count=len(wb_confidence),
+    )
 
     result_state = "ok_low_reliability" if reliability.bucket == "Low" else "ok"
     trace.append("aggregate+scorecard+classify")

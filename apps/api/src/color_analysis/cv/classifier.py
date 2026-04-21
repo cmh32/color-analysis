@@ -32,11 +32,22 @@ def compute_reliability(
     photo_quality_mean: float,
     consistency_score: float,
     margin: float,
+    photo_count: int,
 ) -> Reliability:
     score = max(
         0.0,
         min(1.0, 0.4 * photo_quality_mean + 0.4 * consistency_score + 0.2 * min(1.0, margin / 0.8)),
     )
+    cap: float | None = None
+    if photo_count <= 0:
+        cap = 0.0
+    elif photo_count == 1:
+        cap = 0.45
+    elif photo_count == 2:
+        cap = 0.69
+
+    if cap is not None:
+        score = min(score, cap)
 
     if score >= 0.75:
         bucket = "High"
@@ -49,6 +60,8 @@ def compute_reliability(
         f"quality={photo_quality_mean:.2f}",
         f"consistency={consistency_score:.2f}",
         f"margin={margin:.2f}",
+        f"photo_count={photo_count}",
+        *(tuple([f"photo_count_cap={cap:.2f}"]) if cap is not None else ()),
     )
 
     return Reliability(score=score, bucket=bucket, reasons=reasons)

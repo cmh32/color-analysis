@@ -1,9 +1,11 @@
 import logging
+import math
 import os
 import urllib.request
 from pathlib import Path
 
 import mediapipe as mp
+import numpy as np
 
 from color_analysis.cv.types import DecodedPhoto, LandmarkDetection, Landmarks
 
@@ -48,7 +50,7 @@ def _get_face_landmarker() -> mp.tasks.vision.FaceLandmarker | None:
             running_mode=mp.tasks.vision.RunningMode.IMAGE,
             num_faces=4,
             output_face_blendshapes=False,
-            output_facial_transformation_matrixes=False,
+            output_facial_transformation_matrixes=True,
         )
         _face_landmarker = mp.tasks.vision.FaceLandmarker.create_from_options(options)
     except Exception:
@@ -56,6 +58,52 @@ def _get_face_landmarker() -> mp.tasks.vision.FaceLandmarker | None:
         logger.exception("MediaPipe face landmarker is unavailable")
         return None
     return _face_landmarker
+
+
+def _clamp_pixel(value: float, limit: int) -> int:
+    if limit <= 0:
+        return 0
+    return max(0, min(limit - 1, int(round(value))))
+
+
+def _normalized_to_pixel_points(
+    raw_points: list[object],
+    width: int,
+    height: int,
+) -> tuple[tuple[int, int], ...]:
+    return tuple(
+        (
+            _clamp_pixel(getattr(point, "x", 0.0) * (width - 1), width),
+            _clamp_pixel(getattr(point, "y", 0.0) * (height - 1), height),
+        )
+        for point in raw_points
+    )
+
+
+def _extract_pose_degrees(matrix: np.ndarray | None) -> tuple[float, float, float]:
+    if matrix is None:
+        return 0.0, 0.0, 0.0
+
+    arr = np.asarray(matrix, dtype=np.float64)
+    if arr.shape not in {(4, 4), (3, 4), (3, 3)}:
+        return 0.0, 0.0, 0.0
+
+    rot_scale = arr[:3, :3]
+    try:
+        u, _, vt = np.linalg.svd(rot_scale)
+    except np.linalg.LinAlgError:
+        return 0.0, 0.0, 0.0
+
+    rotation = u @ vt
+    if np.linalg.det(rotation) < 0:
+        vt[-1, :] *= -1.0
+        rotation = u @ vt
+
+    sin_yaw = float(np.clip(-rotation[2, 0], -1.0, 1.0))
+    yaw = math.degrees(math.asin(sin_yaw))
+    pitch = math.degrees(math.atan2(rotation[2, 1], rotation[2, 2]))
+    roll = math.degrees(math.atan2(rotation[1, 0], rotation[0, 0]))
+    return yaw, pitch, roll
 
 
 def detect_landmarks(photo: DecodedPhoto) -> LandmarkDetection:
@@ -70,20 +118,20 @@ def detect_landmarks(photo: DecodedPhoto) -> LandmarkDetection:
     if face_count != 1:
         return LandmarkDetection(face_count=face_count, landmarks=None, available=True)
 
-    lm = result.face_landmarks[0]
+    mesh_points = _normalized_to_pixel_points(result.face_landmarks[0], width, height)
+    face_points = mesh_points[:468]
+    xs = [point[0] for point in face_points]
+    ys = [point[1] for point in face_points]
+    x0 = max(0, min(xs))
+    y0 = max(0, min(ys))
+    x1 = min(width, max(xs) + 1)
+    y1 = min(height, max(ys) + 1)
 
-    # Bbox from the 468 face mesh points; iris points are indices 468-477
-    face_lm = lm[:468]
-    xs = [p.x * width for p in face_lm]
-    ys = [p.y * height for p in face_lm]
-    x0 = max(0, int(min(xs)))
-    y0 = max(0, int(min(ys)))
-    x1 = min(width, int(max(xs)))
-    y1 = min(height, int(max(ys)))
+    left_eye = mesh_points[468]
+    right_eye = mesh_points[473]
 
-    # Iris centers: index 468 = left iris center, 473 = right iris center
-    left_eye = (int(lm[468].x * width), int(lm[468].y * height))
-    right_eye = (int(lm[473].x * width), int(lm[473].y * height))
+    matrix = result.facial_transformation_matrixes[0] if result.facial_transformation_matrixes else None
+    yaw, pitch, roll = _extract_pose_degrees(matrix)
 
     return LandmarkDetection(
         face_count=1,
@@ -92,6 +140,10 @@ def detect_landmarks(photo: DecodedPhoto) -> LandmarkDetection:
             face_bbox=(x0, y0, x1, y1),
             left_eye_center=left_eye,
             right_eye_center=right_eye,
+            mesh_points=mesh_points,
+            pose_yaw_degrees=yaw,
+            pose_pitch_degrees=pitch,
+            pose_roll_degrees=roll,
         ),
         available=True,
     )

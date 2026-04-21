@@ -2,6 +2,16 @@ import numpy as np
 
 from color_analysis.cv.types import RegionFeatures, RegionMasks
 
+_REGION_CLEANUP_LIMITS: dict[str, tuple[float, float, float]] = {
+    "cheek_left": (3.0, 2.5, 2.5),
+    "cheek_right": (3.0, 2.5, 2.5),
+    "forehead": (3.0, 2.5, 2.5),
+    "hair": (3.0, 2.5, 2.5),
+    "iris_left": (2.5, 2.5, 2.5),
+    "iris_right": (2.5, 2.5, 2.5),
+    "sclera": (2.5, 2.0, 2.0),
+}
+
 
 def _rgb_to_lab(rgb: np.ndarray) -> np.ndarray:
     rgb_f = rgb.astype(np.float32) / 255.0
@@ -38,10 +48,30 @@ def _rgb_to_lab(rgb: np.ndarray) -> np.ndarray:
     return np.stack([l_star, a_star, b_star], axis=-1)
 
 
+def _clean_region_pixels(region: str, pixels: np.ndarray) -> np.ndarray:
+    if pixels.shape[0] < 8:
+        return pixels
+
+    limits = _REGION_CLEANUP_LIMITS[region]
+    median = np.median(pixels, axis=0)
+    mad = np.median(np.abs(pixels - median), axis=0)
+    mad = np.where(mad > 1e-6, mad, 1e-6)
+
+    keep = np.ones(pixels.shape[0], dtype=bool)
+    for idx, limit in enumerate(limits):
+        keep &= np.abs(pixels[:, idx] - median[idx]) <= (mad[idx] * limit)
+
+    cleaned = pixels[keep]
+    minimum_cleaned = max(8, int(np.ceil(pixels.shape[0] * 0.3)))
+    return cleaned if cleaned.shape[0] >= minimum_cleaned else pixels
+
+
 def _region_feature(photo_id: str, region: str, lab: np.ndarray, mask: np.ndarray) -> RegionFeatures:
     pixels = lab[mask]
     if pixels.size == 0:
         pixels = np.zeros((1, 3), dtype=np.float32)
+    else:
+        pixels = _clean_region_pixels(region, pixels)
 
     l_star = float(np.median(pixels[:, 0]))
     a_star = float(np.median(pixels[:, 1]))
