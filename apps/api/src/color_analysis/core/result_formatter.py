@@ -1,7 +1,11 @@
+import math
+
 from color_analysis.cv.features import _lab_to_rgb_hex
 from color_analysis.db.models.aggregated_feature import AggregatedFeature
 from color_analysis.db.models.classification import Classification
 from color_analysis.schemas.analysis import AnalysisResult, Reliability, Scorecard
+
+_HAIR_MIN_CHROMA = 6.0
 
 
 def _build_color_swatches(features: list[AggregatedFeature]) -> dict[str, str] | None:
@@ -24,7 +28,10 @@ def _build_color_swatches(features: list[AggregatedFeature]) -> dict[str, str] |
     ]:
         lab = avg_lab(prefixes)
         if lab:
-            swatches[key] = _lab_to_rgb_hex(*lab)
+            l, a, b = lab
+            if key == "hair" and math.sqrt(a**2 + b**2) < _HAIR_MIN_CHROMA:
+                continue
+            swatches[key] = _lab_to_rgb_hex(l, a, b)
     return swatches or None
 
 
