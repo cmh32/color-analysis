@@ -1,7 +1,6 @@
 import type { ClassificationResult } from "../lib/types";
 import { AxisDials } from "./AxisDials";
 import { ReliabilityBadge } from "./ReliabilityBadge";
-import { HowWeMeasured } from "./HowWeMeasured";
 import { DeleteButton } from "./DeleteButton";
 
 type SeasonTone = {
@@ -15,10 +14,6 @@ const SEASON_TONE: Record<ClassificationResult["top_2_seasons"][number], SeasonT
   Autumn: { label: "Rich, warm, and earthy", toneClass: "tone-sage" },
   Winter: { label: "High contrast, cool, and crisp", toneClass: "tone-lilac" }
 };
-
-function humanizeState(value: ClassificationResult["result_state"]): string {
-  return value.replace(/_/g, " ");
-}
 
 export function ResultScreen({ result }: { result: ClassificationResult }) {
   const topSeason = result.top_2_seasons[0];
@@ -38,12 +33,10 @@ export function ResultScreen({ result }: { result: ClassificationResult }) {
             </article>
           ))}
         </div>
-        <span className="state-pill">State: {humanizeState(result.result_state)}</span>
       </section>
 
       <AxisDials scorecard={result.scorecard} />
       <ReliabilityBadge reliability={result.reliability} />
-      <HowWeMeasured traces={result.trace} />
       <DeleteButton sessionId={result.session_id} />
     </>
   );
