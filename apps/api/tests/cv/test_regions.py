@@ -56,4 +56,4 @@ def test_hair_mask_stays_above_forehead_boundary() -> None:
 
     assert hair_ys.size > 0
     assert forehead_ys.size > 0
-    assert int(hair_ys.max()) < int(np.quantile(forehead_ys, 0.3))
+    assert int(hair_ys.max()) < int(np.quantile(forehead_ys, 0.12))

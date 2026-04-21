@@ -13,6 +13,7 @@ _LEFT_EYE_INDICES = (33, 7, 163, 144, 145, 153, 154, 155, 133, 173, 157, 158, 15
 _RIGHT_EYE_INDICES = (263, 249, 390, 373, 374, 380, 381, 382, 362, 398, 384, 385, 386, 387, 388, 466)
 _LEFT_IRIS_INDICES = (468, 469, 470, 471, 472)
 _RIGHT_IRIS_INDICES = (473, 474, 475, 476, 477)
+_HAIR_BAND_LOWER_T = 0.84
 
 _FACE_AREA_THRESHOLDS: dict[str, float] = {
     "cheek_left": 0.008,
@@ -138,7 +139,7 @@ def build_region_masks(rgb_shape: tuple[int, int, int], landmarks: Landmarks | N
     sclera = (sclera_left | sclera_right) & ~(iris_left | iris_right)
 
     hair_upper = _expand_upper_band(forehead_upper, rgb_shape, landmarks.face_bbox)
-    hair_lower = _interpolate_band(forehead_upper, hair_upper, t=0.35)
+    hair_lower = _interpolate_band(forehead_upper, hair_upper, t=_HAIR_BAND_LOWER_T)
     hair = _polygon_mask(shape, hair_upper + list(reversed(hair_lower)))
 
     return RegionMasks(
@@ -164,7 +165,7 @@ def build_overlay_regions(
     forehead_upper = _points_from_indices(landmarks.mesh_points, _FOREHEAD_UPPER_INDICES)
     forehead_lower = _points_from_indices(landmarks.mesh_points, _FOREHEAD_LOWER_INDICES)
     hair_upper = _expand_upper_band(forehead_upper, rgb_shape, landmarks.face_bbox)
-    hair_lower = _interpolate_band(forehead_upper, hair_upper, t=0.35)
+    hair_lower = _interpolate_band(forehead_upper, hair_upper, t=_HAIR_BAND_LOWER_T)
 
     def normalize(points: list[tuple[int, int]]) -> list[dict[str, float]]:
         if width <= 1 or height <= 1:
