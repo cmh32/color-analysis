@@ -162,7 +162,7 @@ export function Upload({ onSessionReady }: { onSessionReady: (sessionId: string)
 
   return (
     <section className="panel upload-panel">
-      <h3 className="section-title upload-title">Upload your photo set</h3>
+      <h3 className="section-title upload-title">Upload your photos</h3>
       <p className="section-note">
         Select 6 to 15 selfies captured in natural light for your most consistent profile.
       </p>

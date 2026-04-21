@@ -136,11 +136,9 @@ export default function AnalyzePage() {
   return (
     <main className="page">
       <section className="hero">
-        <span className="eyebrow">Analyze</span>
         <h1>Build your personalized color profile.</h1>
         <p className="lede">
-          Upload a curated set of selfies and we will estimate your top seasonal family,
-          confidence level, and measurement trace.
+          Upload a curated set of selfies and we will estimate your top seasonal family.
         </p>
       </section>
 
