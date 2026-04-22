@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 
-from color_analysis.cv.regions import build_region_masks
+from color_analysis.cv.regions import _expand_upper_band, build_region_masks
 
 from .helpers import synthetic_landmarks
 
@@ -57,3 +57,16 @@ def test_hair_mask_stays_above_forehead_boundary() -> None:
     assert hair_ys.size > 0
     assert forehead_ys.size > 0
     assert int(hair_ys.max()) < int(np.quantile(forehead_ys, 0.12))
+
+
+def test_hair_upper_band_has_a_domed_center() -> None:
+    landmarks = synthetic_landmarks()
+    forehead_upper = [landmarks.mesh_points[index] for index in (54, 103, 67, 109, 10, 338, 297, 332, 284)]
+
+    expanded = _expand_upper_band(forehead_upper, (480, 640, 3), landmarks.face_bbox)
+
+    midpoint = len(expanded) // 2
+    center_y = expanded[midpoint][1]
+    edge_y = max(expanded[0][1], expanded[-1][1])
+
+    assert center_y < edge_y

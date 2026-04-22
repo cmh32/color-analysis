@@ -58,10 +58,15 @@ def _expand_upper_band(
     face_height = max(1, y1 - y0)
     center_x = (x0 + x1) / 2.0
     expanded: list[tuple[int, int]] = []
-    for x, y in points:
+    point_count = max(1, len(points) - 1)
+    for idx, (x, y) in enumerate(points):
+        position = idx / point_count if point_count else 0.5
+        center_weight = max(0.0, 1.0 - abs((position - 0.5) / 0.5))
+        dome = 0.55 + (0.45 * (center_weight**1.6))
         dx = x - center_x
-        expanded_x = int(round(x + dx * 0.08))
-        expanded_y = int(round(y - face_height * 0.22))
+        side_pull = 0.03 + (0.04 * (1.0 - center_weight))
+        expanded_x = int(round(x + dx * side_pull))
+        expanded_y = int(round(y - face_height * (0.18 + (0.12 * dome))))
         expanded.append((max(0, min(width - 1, expanded_x)), max(0, min(height - 1, expanded_y))))
     return expanded
 
